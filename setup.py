@@ -14,7 +14,7 @@ setup(
     platforms=["Any platform -- don't need Windows"],
     author='Nguyen Ba Duc Tin',
     author_email='nguyenbaduc.tin@gmail.com',
-    description='Make logging simple, log even uncaught exception',
+    description='Make logging simple, log even exception that you forgot to catch',
     long_description=long_description,
     long_description_content_type='text/markdown',
     classifiers=[

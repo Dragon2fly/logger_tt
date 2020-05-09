@@ -1,0 +1,37 @@
+# This is an example of config file
+# In case of no config provided, log_conf.json file will be loaded
+# If you need a yaml file, install pyyaml package and copy this file
+version: 1
+disable_existing_loggers: False
+formatters:
+  simple:
+    format: "[%(asctime)s] [%(name)s %(levelname)s] %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+  brief: {
+    format: "[%(asctime)s] %(levelname)s: %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: simple
+    stream: ext://sys.stdout
+
+  error_file_handler:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: DEBUG
+    formatter: simple
+    filename: logs/log.txt
+    backupCount: 15
+    encoding: utf8
+    when: midnight
+
+loggers:
+  urllib3:
+    level: WARNING
+    handlers: [console, error_file_handler]
+    propagate: no
+
+root:
+  level: DEBUG
+  handlers: [console, error_file_handler]

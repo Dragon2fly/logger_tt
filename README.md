@@ -47,7 +47,7 @@ This logger is also used to log **uncaught exception** in your project. Example:
 raise RecursionError
 ```
 
-```
+```python
 # log.txt
 [2020-05-09 11:42:08] [root ERROR] Uncaught exception
 Traceback (most recent call last):
@@ -60,12 +60,16 @@ RecursionError
 
 1. You can overwrite the default log path with your own as following:
 
+```python
     setup_logging(log_path='new/path/to/your_log.txt')
+```
 
 2. You can config your own logger and handler by providing either `yaml` or `json` config file as following:
-    
+
+```python
     setup_logging(config_path='path/to/.yaml_or_.json')
-    
+```
+
    Without providing a config file, the default config file with above **default** log behavior is used.
 You could copy `log_conf.yaml` or `log_conf.json` shipped with this package to start making your version.
 

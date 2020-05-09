@@ -26,7 +26,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Operating System :: OS Independent',
-        'Topic :: Logging',
+        'Topic :: Software Development :: Debuggers',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
     python_requires=">=3.6",

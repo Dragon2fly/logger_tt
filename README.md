@@ -34,7 +34,7 @@ This log file's `level` is `DEBUG`.<br>
 The log format is `[%(asctime)s] [%(name)s %(levelname)s] %(message)s` where time is `%Y-%m-%d %H:%M:%S`.<br>
 Example: `[2020-05-09 00:31:33] [myproject.mymodule DEBUG] Module is initialized`
 
-* console: log with level `INFO` and above will be printed to `stdout` of console. 
+* console: log with level `INFO` and above will be printed to `stdout` of console. <br>
 The format for console log is simpler: `[%(asctime)s] %(levelname)s: %(message)s`. <br>
 Example: `[2020-05-09 00:31:34] INFO: Making connection ...`
 

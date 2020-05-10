@@ -126,9 +126,10 @@ setup_logging(config_path="", log_path="", capture_print=False, strict=False, gu
    ```
   
    <hr>
-   As you have seen, the log level of captured message is `INFO`. 
-   What if the code base prints something like `An error has occurred. Abort operation.` and you want to log it as `Error`,
-   just add `guess_level=True` to `setup_logging()`.
+   
+   As you have seen, the log level of captured message is `INFO` . 
+   What if the code base prints something like `An error has occurred. Abort operation.` and you want to log it as `Error`?
+   Just add `guess_level=True` to `setup_logging()`.
    
    ```python
    setup_logging(capture_print=True, guess_level=True)

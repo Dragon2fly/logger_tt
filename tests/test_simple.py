@@ -4,6 +4,8 @@ from logging import getLogger
 from pathlib import Path
 from io import StringIO
 
+import pytest
+
 from logger_tt import setup_logging
 
 __author__ = "Duc Tin"
@@ -75,3 +77,18 @@ def test_capture_print_strict():
 
     assert re.search('.*INFO.*This should be printed normally', stdout_data)
     assert re.search('.*INFO.*This should be printed normally', log_data)
+
+
+@pytest.mark.parametrize("msg", [('info', 'abc Info: It will rain this afternoon'),
+                                 ('warning', 'def Warning: the price is down'),
+                                 ('error', 'ghi Error: username incorrect'),
+                                 ('critical', 'jkl Critical: system is overheating'),
+                                 ('debug', 'mno DEBUG: ha ha ha')])
+def test_guess_message_level(msg):
+    setup_logging(capture_print=True, guess_level=True)
+
+    level, msg = msg
+    print(msg)
+    log_data = log.read_text().splitlines()[-1].lower()
+    assert log_data.count(level) == 2
+

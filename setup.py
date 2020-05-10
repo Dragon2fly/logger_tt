@@ -5,7 +5,7 @@ with open('README.md') as fi:
 
 setup(
     name='logger_tt',
-    version='1.0.0',
+    version='1.1.0',
     packages=['logger_tt'],
     url='https://github.com/Dragon2fly/logger_tt',
     package_data={'': ['log_conf.json', 'log_conf.yaml']},

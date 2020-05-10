@@ -3,6 +3,7 @@ import logging
 import json
 from pathlib import Path
 from logging.config import dictConfig
+from .capture import PrintCapture
 
 
 __author__ = "Duc Tin"
@@ -41,11 +42,14 @@ def load_from_file(f: Path) -> dict:
             return json.load(fp)
 
 
-def setup_logging(config_path="", log_path=""):
+def setup_logging(config_path="", log_path="", capture_print=False, strict=False, guess_level=False):
     """Setup logging configuration
         config_path: Path to log config file. Use default config if this is not provided
         log_path: Path to store log file. Override 'filename' field of 'handlers' in
             default config.
+        capture_print: Log message that is printed out with print() function
+        strict: only used when capture_print is True. If strict is True, then log
+            everything that use sys.stdout.write().
     """
     if config_path:
         path = Path(config_path)
@@ -55,9 +59,13 @@ def setup_logging(config_path="", log_path=""):
     else:
         path = Path(__file__).parent / 'log_conf.json'
 
+    # load config from file
     config = load_from_file(path)
     ensure_path(config, log_path)
     logging.config.dictConfig(config)
 
+    # capture other messages
     sys.excepthook = handle_exception
+    if capture_print:
+        sys.stdout = PrintCapture(sys.stdout, strict=strict, guess_level=guess_level)
     logging.debug('New log started'.center(50, '_'))

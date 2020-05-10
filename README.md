@@ -106,8 +106,8 @@ setup_logging(config_path="", log_path="", capture_print=False, strict=False, gu
    <hr>
    
    Yes, `That is the question` is not captured. 
-   Some library may directly use `sys.stdout.write` to draw on the screen or do something quirk, 
-   which is usually not a useful information. But when you do need it, you can capture it as following:
+   Some libraries may directly use `sys.stdout.write` to draw on the screen or do something quirk.
+   These information is usually not useful for user. But when you do need it, you can capture it as following:
    
    ```python
    setup_logging(capture_print=True, strict=True)

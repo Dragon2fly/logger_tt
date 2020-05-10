@@ -81,6 +81,7 @@ setup_logging(config_path="", log_path="", capture_print=False, strict=False, gu
    **Warning**: To process `.yaml` config file, you need to `pyyaml` package: `pip install pyyaml`
 
 3. Capture stdout:
+
    If you have old code base with a lot of `print(msg)` or `sys.stdout.write(msg)` and 
    don't have access or time to refactor them into something like `logger.info(msg)`, 
    you can capture these `msg` and log them to file, too.
@@ -106,7 +107,7 @@ setup_logging(config_path="", log_path="", capture_print=False, strict=False, gu
    
    Yes, `That is the question` is not captured. 
    Some library may directly use `sys.stdout.write` to draw on the screen or do something quirk, 
-   with is usually not a useful information. But when you do need it, you can capture it as following:
+   which is usually not a useful information. But when you do need it, you can capture it as following:
    
    ```python
    setup_logging(capture_print=True, strict=True)

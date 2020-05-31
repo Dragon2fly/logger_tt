@@ -57,7 +57,7 @@ def setup_logging(config_path="", log_path="", capture_print=False, strict=False
         assert path.suffix in ['.yaml', '.json'], 'Config file type must be either yaml or json!'
         assert path.exists(), f'Config file path not exists! {path.absolute()}'
     else:
-        path = Path(__file__).parent / 'log_conf.json'
+        path = Path(__file__).parent / 'log_config.json'
 
     # load config from file
     config = load_from_file(path)

@@ -8,7 +8,7 @@ setup(
     version='1.1.0',
     packages=['logger_tt'],
     url='https://github.com/Dragon2fly/logger_tt',
-    package_data={'': ['log_conf.json', 'log_conf.yaml']},
+    package_data={'': ['log_config.json', 'log_config.yaml']},
     include_package_data=True,
     license='MIT',
     platforms=["Any platform -- don't need Windows"],

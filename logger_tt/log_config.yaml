@@ -1,5 +1,5 @@
 # This is an example of config file
-# In case of no config provided, log_conf.json file will be loaded
+# In case of no config provided, log_config.json file will be loaded
 # If you need a yaml file, install pyyaml package and copy this file
 version: 1
 disable_existing_loggers: False

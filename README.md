@@ -152,3 +152,96 @@ setup_logging(config_path="", log_path="", capture_print=False, strict=False, gu
    That means messages like `\n\n` or `  `(spaces) will not appear in the log. 
    But messages that contain blank line(s) and other characters will be fully logged.
    For example, `\nTo day is a beautiful day\n` will be logged as is.  
+
+# Sample config:
+
+1. Yaml format:
+
+   ```yaml
+   version: 1
+   disable_existing_loggers: False
+   formatters:
+     simple:
+       format: "[%(asctime)s] [%(name)s %(levelname)s] %(message)s"
+       datefmt: "%Y-%m-%d %H:%M:%S"
+     brief: {
+       format: "[%(asctime)s] %(levelname)s: %(message)s"
+       datefmt: "%Y-%m-%d %H:%M:%S"
+   handlers:
+     console:
+       class: logging.StreamHandler
+       level: INFO
+       formatter: simple
+       stream: ext://sys.stdout
+   
+     error_file_handler:
+       class: logging.handlers.TimedRotatingFileHandler
+       level: DEBUG
+       formatter: simple
+       filename: logs/log.txt
+       backupCount: 15
+       encoding: utf8
+       when: midnight
+   
+   loggers:
+     urllib3:
+       level: WARNING
+       handlers: [console, error_file_handler]
+       propagate: no
+   
+   root:
+     level: DEBUG
+     handlers: [console, error_file_handler]
+   ```
+
+<br>
+2. Json format:
+
+   ```json
+   {
+     "version": 1,
+     "disable_existing_loggers": false,
+     "formatters": {
+       "simple": {
+         "format": "[%(asctime)s] [%(name)s %(levelname)s] %(message)s",
+         "datefmt": "%Y-%m-%d %H:%M:%S"
+       },
+       "brief": {
+         "format": "[%(asctime)s] %(levelname)s: %(message)s",
+         "datefmt": "%Y-%m-%d %H:%M:%S"
+       }
+     },
+   
+     "handlers": {
+       "console": {
+         "class": "logging.StreamHandler",
+         "level": "INFO",
+         "formatter": "brief",
+         "stream": "ext://sys.stdout"
+       },
+   
+       "error_file_handler": {
+         "class": "logging.handlers.TimedRotatingFileHandler",
+         "level": "DEBUG",
+         "formatter": "simple",
+         "filename": "logs/log.txt",
+         "backupCount": 15,
+         "encoding": "utf8",
+         "when": "midnight"
+       }
+     },
+   
+     "loggers": {
+       "urllib3": {
+         "level": "ERROR",
+         "handlers": ["console", "error_file_handler"],
+         "propagate": false
+       }
+     },
+   
+     "root": {
+       "level": "DEBUG",
+       "handlers": ["console", "error_file_handler"]
+     }
+   }
+   ```

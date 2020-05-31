@@ -2,7 +2,6 @@ import re
 import sys
 from logging import getLogger
 from pathlib import Path
-from io import StringIO
 
 import pytest
 
@@ -12,11 +11,13 @@ __author__ = "Duc Tin"
 
 logger = getLogger(__name__)
 log = Path.cwd() / 'logs/log.txt'
+try:
+    log.unlink()
+except FileNotFoundError:
+    pass
 
 
-def test_basic_function():
-    stdout = StringIO()
-    sys.stdout = stdout
+def test_basic_function(capsys):
     setup_logging()
 
     logger.debug('my debug')
@@ -26,7 +27,8 @@ def test_basic_function():
     logger.critical('the market crashed')
 
     # check stdout
-    stdout_data = sys.stdout.getvalue()
+    captured = capsys.readouterr()
+    stdout_data = captured.out
     assert 'my debug' not in stdout_data
     assert 'my info' in stdout_data
     assert 'my warning' in stdout_data
@@ -42,15 +44,14 @@ def test_basic_function():
     assert 'the market crashed' in log_data
 
 
-def test_capture_print_not_strict():
-    stdout = StringIO()
-    sys.stdout = stdout
+def test_capture_print_not_strict(capsys):
     setup_logging(capture_print=True)
 
     print('This is my print')
+    sys.stdout.write('\n')
     sys.stdout.write('This should be printed normally')
 
-    stdout_data = stdout.getvalue()
+    stdout_data = capsys.readouterr().out
     log_data = log.read_text()
 
     assert re.search('.*INFO.*This is my print', stdout_data)
@@ -61,22 +62,20 @@ def test_capture_print_not_strict():
     assert 'This should be printed normally' not in log_data
 
 
-def test_capture_print_strict():
-    stdout = StringIO()
-    sys.stdout = stdout
+def test_capture_print_strict(capsys):
     setup_logging(capture_print=True, strict=True)
 
     print('This is my print')
-    sys.stdout.write('This should be printed normally')
+    sys.stdout.write('This should be printed normally too')
 
-    stdout_data = stdout.getvalue()
+    stdout_data = capsys.readouterr().out
     log_data = log.read_text()
 
     assert re.search('.*INFO.*This is my print', stdout_data)
     assert re.search('.*INFO.*This is my print', log_data)
 
-    assert re.search('.*INFO.*This should be printed normally', stdout_data)
-    assert re.search('.*INFO.*This should be printed normally', log_data)
+    assert re.search('.*INFO.*This should be printed normally too', stdout_data)
+    assert re.search('.*INFO.*This should be printed normally too', log_data)
 
 
 @pytest.mark.parametrize("msg", [('info', 'abc Info: It will rain this afternoon'),

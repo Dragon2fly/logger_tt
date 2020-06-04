@@ -11,10 +11,6 @@ __author__ = "Duc Tin"
 
 logger = getLogger(__name__)
 log = Path.cwd() / 'logs/log.txt'
-try:
-    log.unlink()
-except FileNotFoundError:
-    pass
 
 
 def test_basic_function(capsys):

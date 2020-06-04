@@ -46,7 +46,6 @@ def pytest_sessionstart(session):
     pass
 
 
-
 def pytest_sessionfinish(session, exitstatus):
     """
     Called after whole test run finished, right before

@@ -24,23 +24,23 @@ logger.info('Making connection ...')
 ```
 
 
-This will provide your project the following **default** log behavior:
+This will provide your project with the following **default** log behavior:
 
 * log file: Assume that your `working directory` is `project_root`,
  log.txt is stored at your `project_root/logs/` folder. 
-If log path doesn't exist, it will be created. 
-The log file is time rotated at midnight. Maximum of 15 dates of log will be kept.
+If the log path doesn't exist, it will be created. 
+The log file is time rotated at midnight. A maximum of 15 dates of logs will be kept.
 This log file's `level` is `DEBUG`.<br>
 The log format is `[%(asctime)s] [%(name)s %(levelname)s] %(message)s` where time is `%Y-%m-%d %H:%M:%S`.<br>
 Example: `[2020-05-09 00:31:33] [myproject.mymodule DEBUG] Module is initialized`
 
-* console: log with level `INFO` and above will be printed to `stdout` of console. <br>
+* console: log with level `INFO` and above will be printed to `stdout` of the console. <br>
 The format for console log is simpler: `[%(asctime)s] %(levelname)s: %(message)s`. <br>
 Example: `[2020-05-09 00:31:34] INFO: Making connection ...`
 
-* `urllib3` logger: this ready made logger is to silent unwanted messages from `requests` library.
+* `urllib3` logger: this ready-made logger is to silent unwanted messages from `requests` library.
 
-* `root` logger: if there is no logger initialized in your module, this logger will be used with above behaviors.
+* `root` logger: if there is no logger initialized in your module, this logger will be used with the above behaviors.
 This logger is also used to log **uncaught exception** in your project. Example:
 
 ```python
@@ -49,7 +49,7 @@ raise RecursionError
 
 ```python
 # log.txt
-[2020-05-09 11:42:08] [root ERROR] Uncaught exception
+2020-05-31 19:16:01 ERROR	[root] Uncaught exception
 Traceback (most recent call last):
   File "D:/MyProject/Echelon/eyes.py", line 13, in <module>
     raise RecursionError
@@ -57,36 +57,36 @@ RecursionError
 ```
 
 ## Config:
-All config are done through `setup_logging` function:
+All configs are done through `setup_logging` function:
 ```python
 setup_logging(config_path="", log_path="", capture_print=False, strict=False, guess_level=False)
 ```
 
 
-1. You can overwrite the default log path with your own as following:
+1. You can overwrite the default log path with your own as follows:
     
    ```python
    setup_logging(log_path='new/path/to/your_log.txt')
    ```
 
-2. You can config your own logger and handler by providing either `yaml` or `json` config file as following:
+2. You can config your own logger and handler by providing either `yaml` or `json` config file as follows:
     
    ```python
    setup_logging(config_path='path/to/.yaml_or_.json')
    ```
 
-   Without providing a config file, the default config file with above **default** log behavior is used.
+   Without providing a config file, the default config file with the above **default** log behavior is used.
    You could copy `log_conf.yaml` or `log_conf.json` shipped with this package to start making your version.
 
    **Warning**: To process `.yaml` config file, you need to `pyyaml` package: `pip install pyyaml`
 
 3. Capture stdout:
 
-   If you have old code base with a lot of `print(msg)` or `sys.stdout.write(msg)` and 
+   If you have an old code base with a lot of `print(msg)` or `sys.stdout.write(msg)` and 
    don't have access or time to refactor them into something like `logger.info(msg)`, 
    you can capture these `msg` and log them to file, too.
    
-   To capture only `msg` that is printed out by `print(msg)`, simply do as following: 
+   To capture only `msg` that is printed out by `print(msg)`, simply do as follows: 
     
    ```python
    setup_logging(capture_print=True)
@@ -106,8 +106,8 @@ setup_logging(config_path="", log_path="", capture_print=False, strict=False, gu
    <hr>
    
    Yes, `That is the question` is not captured. 
-   Some libraries may directly use `sys.stdout.write` to draw on the screen or do something quirk.
-   These information is usually not useful for user. But when you do need it, you can capture it as following:
+   Some libraries may directly use `sys.stdout.write` to draw on the screen (eg. progress bar) or do something quirk.
+   This kind of information is usually not useful for users. But when you do need it, you can capture it as follows:
    
    ```python
    setup_logging(capture_print=True, strict=True)
@@ -127,7 +127,7 @@ setup_logging(config_path="", log_path="", capture_print=False, strict=False, gu
   
    <hr>
    
-   As you have seen, the log level of captured message is `INFO` . 
+   As you have seen, the log level of the captured message is `INFO` . 
    What if the code base prints something like `An error has occurred. Abort operation.` and you want to log it as `Error`?
    Just add `guess_level=True` to `setup_logging()`.
    

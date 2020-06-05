@@ -10,6 +10,16 @@ MEM_PATTERN = re.compile(r'<.*object at 0x[0-9A-F]+>')
 
 
 def get_recur_attr(obj, attr: str):
+    """
+    Follow the dot `.` in attribute string `attr` to the final object
+    :param obj: any object
+    :param attr: string of attribute access
+    :return: the final desire object or '!!! Not Exists'
+
+    example: if we need to access `c` object as in `a.b.c`,
+    then `obj=a, attr='b.c'`
+    If `b` or `c` doesn't exists, then `'!!! Not Exists'` is returned
+    """
     this_level, *next_levels = attr.split('.', maxsplit=1)
     if not next_levels:
         try:
@@ -22,14 +32,26 @@ def get_recur_attr(obj, attr: str):
 
 
 def get_repr(obj) -> str:
+    """
+    Pick a more useful representation of object `obj` between __str__ and __repr__
+     if it available.
+    :param obj: any of object
+    :return: string of object representation
+    """
     _repr_ = repr(obj)
     _str_ = str(obj)
     return _str_ if MEM_PATTERN.match(_repr_) else _repr_
 
 
-def analyze_frame(trace_back, full_context=False):
+def analyze_frame(trace_back, full_context=False) -> str:
+    """
+    Read out variables' content surrounding the error line of code
+    :param trace_back: A traceback object when exception occur
+    :param full_context: Also export local variables that is not in the error line
+    :return: string of analyzed frame
+    """
     result = []
-
+    # todo: support multi-line statement
     for idx, obj in enumerate(walk_tb(trace_back)):
         frame, _ = obj
 

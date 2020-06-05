@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from logging.config import dictConfig
 from .capture import PrintCapture
+from inspector import analyze_frame
+from functools import partial
 
 
 __author__ = "Duc Tin"
@@ -13,13 +15,17 @@ __all__ = ['setup_logging']
 """Config log from file and make it also logs uncaught exception"""
 
 
-def handle_exception(exc_type, exc_value, exc_traceback):
+def handle_exception(exc_type, exc_value, exc_traceback, full_context):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
 
     # Root logger with log all other uncaught exceptions
-    logging.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+    txt = analyze_frame(exc_traceback, full_context)
+    logging.error(f"Uncaught exception:\n"
+                  f"Traceback (most recent call last):\n"
+                  f"{txt}",
+                  exc_info=(exc_type, exc_value, None))
 
 
 def ensure_path(config: dict, override_log_path: str = ""):
@@ -42,14 +48,18 @@ def load_from_file(f: Path) -> dict:
             return json.load(fp)
 
 
-def setup_logging(config_path="", log_path="", capture_print=False, strict=False, guess_level=False):
+def setup_logging(config_path="", log_path="",
+                  capture_print=False, strict=False, guess_level=False,
+                  full_context=False):
     """Setup logging configuration
-        config_path: Path to log config file. Use default config if this is not provided
-        log_path: Path to store log file. Override 'filename' field of 'handlers' in
+        :param config_path: Path to log config file. Use default config if this is not provided
+        :param log_path: Path to store log file. Override 'filename' field of 'handlers' in
             default config.
-        capture_print: Log message that is printed out with print() function
-        strict: only used when capture_print is True. If strict is True, then log
+        :param capture_print: Log message that is printed out with print() function
+        :param strict: only used when capture_print is True. If strict is True, then log
             everything that use sys.stdout.write().
+        :param guess_level: auto guess logging level of captured message
+        :param full_context: whether to log full local scope on exception or not
     """
     if config_path:
         path = Path(config_path)
@@ -65,7 +75,7 @@ def setup_logging(config_path="", log_path="", capture_print=False, strict=False
     logging.config.dictConfig(config)
 
     # capture other messages
-    sys.excepthook = handle_exception
+    sys.excepthook = partial(handle_exception, full_context=full_context)
     if capture_print:
         sys.stdout = PrintCapture(sys.stdout, strict=strict, guess_level=guess_level)
     logging.debug('New log started'.center(50, '_'))

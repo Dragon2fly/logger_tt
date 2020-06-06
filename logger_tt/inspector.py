@@ -89,7 +89,8 @@ def analyze_frame(trace_back, full_context=False) -> str:
                 # txt.append('     │ => other local variables │')
                 # txt.append('     └──────────────────────────┘')
                 txt.extend([f'       => {k} = {get_repr(v)}' for k, v in local_var.items() if k in other_local_var])
-                txt.append('')
+
+        txt.append('')
         result.append('\n'.join(txt))
 
     return '\n'.join(result)

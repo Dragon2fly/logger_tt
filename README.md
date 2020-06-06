@@ -3,7 +3,7 @@ Make configuring logging simpler and log even exceptions that you forgot to catc
 
 ## Install
 * From PYPI: `pip install logger_tt`
-* From Github: clone or download this repo then `python setup.py` 
+* From Github: clone or download this repo then `python setup.py install` 
     
 ## Overview:
 

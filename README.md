@@ -371,15 +371,15 @@ setup_logging(config_path="", log_path="",
    ```
 
 # changelog
-##1.2.0
+## 1.2.0
 * Add logging context for uncaught exception. Now automatically log variables surrounding the error line, too.
 * Add test cases for logging exception
 
-##1.1.1
+## 1.1.1
 * Fixed typos and grammar
 * Add config file sample to README
 * using full name `log_config.json` instead of `log_conf.json`, the same for yaml file 
 * add test cases for `capture print`
 
-##1.1.0
+## 1.1.0
 * Add `capture print` functionality with `guess level` for the message.

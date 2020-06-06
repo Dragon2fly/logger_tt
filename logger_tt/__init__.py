@@ -3,9 +3,9 @@ import logging
 import json
 from pathlib import Path
 from logging.config import dictConfig
-from .capture import PrintCapture
-from inspector import analyze_frame
 from functools import partial
+from .capture import PrintCapture
+from .inspector import analyze_frame
 
 
 __author__ = "Duc Tin"

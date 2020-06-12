@@ -3,6 +3,7 @@ import logging
 import json
 from pathlib import Path
 from logging.config import dictConfig
+from dataclasses import dataclass
 from functools import partial
 from .capture import PrintCapture
 from .inspector import analyze_frame
@@ -15,10 +16,20 @@ __all__ = ['setup_logging']
 """Config log from file and make it also logs uncaught exception"""
 
 
-def handle_exception(exc_type, exc_value, exc_traceback, full_context):
+@dataclass()
+class LogConfig:
+    full_context:bool = False
+
+
+internal_config = LogConfig()
+
+
+def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
+
+    full_context = internal_config.full_context
 
     # Root logger with log all other uncaught exceptions
     txt = analyze_frame(exc_traceback, full_context)
@@ -74,8 +85,38 @@ def setup_logging(config_path="", log_path="",
     ensure_path(config, log_path)
     logging.config.dictConfig(config)
 
+    # set internal config
+    internal_config.full_context = full_context
+
     # capture other messages
-    sys.excepthook = partial(handle_exception, full_context=full_context)
+    sys.excepthook = partial(handle_exception)
     if capture_print:
         sys.stdout = PrintCapture(sys.stdout, strict=strict, guess_level=guess_level)
     logging.debug('New log started'.center(50, '_'))
+
+
+class ExceptionLogger(logging.Logger):
+    """Modify the `exception` func so that it print out context too
+        This allow user do a try-except in outer code but still has the full log
+        of nested code's error
+        Example:
+            try:
+                a, b = 1, 0
+            except Exception as e:
+                logger.exception(e)
+            # then move on
+    """
+    def exception(self, msg, *args, exc_info=True, **kwargs):
+        if exc_info:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            full_context = internal_config.full_context
+            txt = analyze_frame(exc_traceback, full_context)
+            logging.error(f'{msg}\n'
+                          f"Traceback (most recent call last):\n"
+                          f"{txt}",
+                          exc_info=(exc_type, exc_value, None))
+        else:
+            logging.error(msg, *args, exc_info=exc_info, **kwargs)
+
+
+logging.setLoggerClass(ExceptionLogger)

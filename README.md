@@ -275,7 +275,55 @@ setup_logging(config_path="", log_path="",
    
    Additional objects that not appear in the error line are prefixed with `=>`.
    
-
+5. `try-except` exception logging:
+   
+   `exception context` logging also applies for `try-except` block.
+    This means that if you call `logger.exception()` inside `except` block, 
+    you would have all variables' value at the line of exception. For example,
+    
+   ```python
+   def my_faulty_func():
+       a = 10
+       b = 0
+       c = a/b
+       return c
+   
+   def my_main():
+       try:
+           my_faulty_func()
+       except Exception as e:
+           logger.exception('some error has occured')
+           print('Clean up resource')
+   
+   my_main()
+   ``` 
+   
+   Then the log will show up as follows:
+   
+   ```python
+   [2020-06-12 21:37:00] ERROR: some error has occured
+   Traceback (most recent call last):
+     File "D:/MyProject/exception_log.py", line 19, in my_main
+       my_faulty_func()
+        -> my_faulty_func = <function my_faulty_func at 0x000001875DD4B168>
+   
+     File "D:/MyProject/exception_log.py", line 13, in my_faulty_func
+       c = a / b
+        -> a = 10
+        -> b = 0
+   ZeroDivisionError: division by zero
+   Clean up resource
+   ```
+   
+   **Note**: As in python's [logging document](https://docs.python.org/3/library/logging.html#logging.Logger.exception),
+    `logger.exception()` should only be called from an exception handler, eg. inside `except` block.
+   
+   You don't need to pass `exception object` to `logger.exception()`. 
+   It already knows how to get a traceback internally. 
+   This enable you to pass any string in as a hint or a short description of what may have happened.  
+   Otherwise, passing `exception object`, as `logger.exception(e)`, 
+   will cause the first line of error report to be the message of exception. 
+   In the case of the above example, it would be come `[2020-06-12 21:37:00] ERROR: division by zero`.
 
 # Sample config:
 
@@ -371,6 +419,10 @@ setup_logging(config_path="", log_path="",
    ```
 
 # changelog
+## 1.2.1
+* Extend logging context to `logger.exception()` as well. 
+Now you can do `try-except` a block of code and still have a full context at error line. 
+
 ## 1.2.0
 * Add logging context for uncaught exception. Now automatically log variables surrounding the error line, too.
 * Add test cases for logging exception

@@ -82,3 +82,12 @@ def test_full_context():
     assert "Base = <class '__main__.Base'>" in data
     assert "arg = (456, 789)" in data
     assert "arg = 345" in data
+
+
+def test_log_exception():
+    cmd = ["python", "exception_log.py"]
+    run(cmd)
+
+    data = log.read_text(encoding='utf8')
+    assert "-> a = 1" in data
+    assert "-> b = 0" in data

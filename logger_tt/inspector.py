@@ -52,6 +52,7 @@ def analyze_frame(trace_back, full_context=False) -> str:
     """
     result = []
     # todo: support multi-line statement
+    # todo: add color
     for idx, obj in enumerate(walk_tb(trace_back)):
         frame, _ = obj
 
@@ -94,3 +95,5 @@ def analyze_frame(trace_back, full_context=False) -> str:
         result.append('\n'.join(txt))
 
     return '\n'.join(result)
+
+

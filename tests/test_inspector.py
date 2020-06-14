@@ -1,7 +1,7 @@
 from pathlib import Path
 from subprocess import run
 
-from logger_tt.inspector import get_recur_attr, get_repr
+from logger_tt.inspector import get_recur_attr, get_repr, is_full_statement
 
 
 __author__ = "Duc Tin"
@@ -41,6 +41,16 @@ def test_get_repr():
 
     assert get_repr(A()) == "A 123"
     assert get_repr(B()) == "B(arg=arg)"
+
+
+def test_is_full_statement():
+    pycode = "print(f'{self.value} '"
+    assert not is_full_statement(pycode)
+
+    assert is_full_statement(pycode, "      'f{another} line'", "      )")
+
+    pycode = "print(3+4)"
+    assert is_full_statement(pycode)
 
 
 def test_1_scope():
@@ -91,3 +101,13 @@ def test_log_exception():
     data = log.read_text(encoding='utf8')
     assert "-> a = 1" in data
     assert "-> b = 0" in data
+
+
+def test_multiline():
+    cmd = ["python", "exception_multiline.py"]
+    run(cmd)
+
+    data = log.read_text(encoding='utf8')
+    assert "self.value = 3" in data
+    assert "self.non_exist = '!!! Not Exists'" in data
+    assert "self.base.name = 'Nested dot'" in data

@@ -200,15 +200,15 @@ setup_logging(config_path="", log_path="",
    Traceback (most recent call last):
      File "D:/MyProject/AutoBanking/main.py", line 31, in <module>
        my_faulty_func(max_concurrent_processes, 'ryzen 7', freq=3.4)
-        |─> my_faulty_func = <function my_faulty_func at 0x0000023770C6A288>
-        |─> max_concurrent_processes = 3
+        |-> my_faulty_func = <function my_faulty_func at 0x0000023770C6A288>
+        |-> max_concurrent_processes = 3
    
      File "D:/MyProject/AutoBanking/main.py", line 25, in my_faulty_func
        print(f'Information: {var} and {me.my_boss.name}'
               ' at {me.my_boss.location} with {API_KEY}')
-        |─> me.my_boss.name = 'Winston'
-        |─> me.my_boss.location = '!!! Not Exists'
-        |─> (outer) API_KEY = 'asdjhfbhbsdf82340hsdf09u3ionf98230234ilsfd'
+        |-> me.my_boss.name = 'Winston'
+        |-> me.my_boss.location = '!!! Not Exists'
+        |-> (outer) API_KEY = 'asdjhfbhbsdf82340hsdf09u3ionf98230234ilsfd'
    NameError: name 'var' is not defined
    ```
    
@@ -247,8 +247,8 @@ setup_logging(config_path="", log_path="",
    Traceback (most recent call last):
      File "D:/MyProject/AutoBanking/main.py", line 31, in <module>
        my_faulty_func(max_concurrent_processes, 'ryzen 7', freq=3.4)
-        |─> my_faulty_func = <function my_faulty_func at 0x0000019E3599A288>
-        |─> max_concurrent_processes = 3
+        |-> my_faulty_func = <function my_faulty_func at 0x0000019E3599A288>
+        |-> max_concurrent_processes = 3
         => __name__ = '__main__'
         => __doc__ = None
         => __package__ = None
@@ -268,9 +268,9 @@ setup_logging(config_path="", log_path="",
    
      File "D:/MyProject/AutoBanking/main.py", line 25, in my_faulty_func
        print(f'Information: {var} and {me.my_boss.name} at {me.my_boss.location} with {API_KEY}')
-        |─> me.my_boss.name = 'Winston'
-        |─> me.my_boss.location = '!!! Not Exists'
-        |─> (outer) API_KEY = 'asdjhfbhbsdf82340hsdf09u3ionf98230234ilsfd'
+        |-> me.my_boss.name = 'Winston'
+        |-> me.my_boss.location = '!!! Not Exists'
+        |-> (outer) API_KEY = 'asdjhfbhbsdf82340hsdf09u3ionf98230234ilsfd'
         => my_var = 3
         => args = ('ryzen 7',)
         => kwargs = {'freq': 3.4}
@@ -312,12 +312,12 @@ setup_logging(config_path="", log_path="",
    Traceback (most recent call last):
      File "D:/MyProject/exception_log.py", line 19, in my_main
        my_faulty_func()
-        |─> my_faulty_func = <function my_faulty_func at 0x000001875DD4B168>
+        |-> my_faulty_func = <function my_faulty_func at 0x000001875DD4B168>
    
      File "D:/MyProject/exception_log.py", line 13, in my_faulty_func
        c = a / b
-        |─> a = 10
-        |─> b = 0
+        |-> a = 10
+        |-> b = 0
    ZeroDivisionError: division by zero
    Clean up resource
    ```
@@ -426,9 +426,13 @@ setup_logging(config_path="", log_path="",
    ```
 
 # changelog
+## 1.3.2
+* change extended ascii dash ` － ` to normal dash `-` 
+so that it is displayed consistently in different encoding 
+
 ## 1.3.1
-* change extended ascii vertical bar `├` to normal bar `|` 
-so that it is displayed consistently in different fonts 
+* change extended ascii vertical bar ` ├ ` to normal bar `|` 
+so that it is displayed consistently in different encoding 
 
 ## 1.3.0
 * Exception analyzing now fetch full multi-line python statement. 

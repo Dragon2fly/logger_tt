@@ -46,6 +46,7 @@ def ensure_path(config: dict, override_log_path: str = ""):
         if not filename:
             continue
         filename = override_log_path or filename
+        handler['filename'] = filename
         log_path = Path(filename).parent
         log_path.mkdir(parents=True, exist_ok=True)
 
@@ -59,9 +60,19 @@ def load_from_file(f: Path) -> dict:
             return json.load(fp)
 
 
+def suppress_logger(loggers, suppress_level_below):
+    if not loggers:
+        return
+
+    for name in loggers:
+        logger = logging.getLogger(name)
+        logger.level = suppress_level_below
+
+
 def setup_logging(config_path="", log_path="",
                   capture_print=False, strict=False, guess_level=False,
-                  full_context=False):
+                  full_context=False,
+                  suppress_level_below=logging.WARNING):
     """Setup logging configuration
         :param config_path: Path to log config file. Use default config if this is not provided
         :param log_path: Path to store log file. Override 'filename' field of 'handlers' in
@@ -71,6 +82,8 @@ def setup_logging(config_path="", log_path="",
             everything that use sys.stdout.write().
         :param guess_level: auto guess logging level of captured message
         :param full_context: whether to log full local scope on exception or not
+        :param suppress_level_below: For logger in the suppress list, any message below this level
+            is not processed, not printed out nor logged to file
     """
     if config_path:
         path = Path(config_path)
@@ -83,6 +96,7 @@ def setup_logging(config_path="", log_path="",
     # load config from file
     config = load_from_file(path)
     ensure_path(config, log_path)
+    suppress_logger(config.pop('suppress', None), suppress_level_below)
     logging.config.dictConfig(config)
 
     # set internal config

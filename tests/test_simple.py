@@ -1,10 +1,10 @@
+import logging
 import re
 import sys
 from logging import getLogger
 from pathlib import Path
 
 import pytest
-
 from logger_tt import setup_logging
 
 __author__ = "Duc Tin"
@@ -87,3 +87,22 @@ def test_guess_message_level(msg):
     log_data = log.read_text().splitlines()[-1].lower()
     assert log_data.count(level) == 2
 
+
+@pytest.mark.parametrize("level", [logging.WARNING, logging.ERROR])
+def test_suppress_logger(capsys, level):
+    setup_logging(suppress_level_below=level)
+
+    from tests.exchangelib_logger import fox_run
+
+    fox_run()
+    stdout_data = capsys.readouterr().out
+    assert 'DEBUG' not in stdout_data
+    assert 'INFO' not in stdout_data
+
+    if level == logging.WARNING:
+        assert 'WARNING' in stdout_data
+    elif level == logging.ERROR:
+        assert 'WARNING' not in stdout_data
+
+    assert 'ERROR' in stdout_data
+    assert 'CRITICAL' in stdout_data

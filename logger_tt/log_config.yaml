@@ -35,3 +35,5 @@ loggers:
 root:
   level: DEBUG
   handlers: [console, error_file_handler]
+
+suppress: [exchangelib]

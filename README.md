@@ -42,6 +42,8 @@ The format for console log is simpler: `[%(asctime)s] %(levelname)s: %(message)s
 Example: `[2020-05-09 00:31:34] INFO: Making connection ...`
 
 * `urllib3` logger: this ready-made logger is to silent unwanted messages from `requests` library.
+* suppressed logger: `exchangelib`. This sets logging level of `exchangelib` logger to `WARNING`.<br>
+This is another ways to silent unwanted messages from other module, read below for details.
 
 * `root` logger: if there is no logger initialized in your module, this logger will be used with the above behaviors.
 This logger is also used to log **uncaught exception** in your project. Example:
@@ -72,7 +74,8 @@ All configs are done through `setup_logging` function:
 ```python
 setup_logging(config_path="", log_path="", 
               capture_print=False, strict=False, guess_level=False,
-              full_context=False)
+              full_context=False,
+              suppress_level_below=logging.WARNING)
 ```
 
 
@@ -332,10 +335,44 @@ setup_logging(config_path="", log_path="",
    will cause the first line of error report to be the message of exception. 
    In the case of the above example, it would be come `[2020-06-12 21:37:00] ERROR: division by zero`.
 
+6. Silent unwanted logger:
+   
+   Third party modules also have logger and their messages are usually not related to your code.
+   A bunch of unwanted messages may hide the one that come from your own module. 
+   To prevent that and also reduce log file size, we need to silent unwanted loggers.
+   
+   There are two ways to silent a logger with config file:
+   
+   * Create a new logger: in `logger` section of config file, 
+   add a new logger whose name is the same with the one you want to silent. 
+   Set it level to `WARNING` or above. If you add `handlers`, you should also set `propagate` to `no` or `False`.
+   Otherwise, the same message may be logged multiple times. Ex:
+          
+         urllib3:
+           level: WARNING
+           handlers: [console, error_file_handler]
+           propagate: no
+   
+     Above setting only allow messages with level `WARNING` and above to be processed. 
+     Usually that is enough to silent most of unwanted messages. If you need to silent more messages,
+     try `ERROR` or `CRITICAL`.
+   
+   * Add logger's name to `suppress list`: Then a new logger with level default to `WARNING` will be 
+   automatically created for you. Ex:
+   
+         suppress: [exchangelib, urllib3]
+   
+     If you need to suppress at even higher level, use `suppress_level_below` in `setup_logging`.
+     For example suppress any message below `ERROR` level that comes from loggers in `suppress list`:
+     
+         setup_logging(suppress_level_below=logging.ERROR)
+
 # Sample config:
 
 1. Yaml format:
-
+   
+   log_config.yaml:
+   
    ```yaml
    version: 1
    disable_existing_loggers: False
@@ -371,10 +408,14 @@ setup_logging(config_path="", log_path="",
    root:
      level: DEBUG
      handlers: [console, error_file_handler]
+   
+   suppress: [exchangelib]
    ```
 
 <br>
 2. Json format:
+
+   log_config.json:
 
    ```json
    {
@@ -421,11 +462,17 @@ setup_logging(config_path="", log_path="",
      "root": {
        "level": "DEBUG",
        "handlers": ["console", "error_file_handler"]
-     }
+     },
+
+     "suppress": ["exchangelib"]
    }
    ```
 
 # changelog
+## 1.4.0
+* Add an extra field `suppress` in config file. 
+Any logger's name appeared in this list will have its messages suppressed.
+
 ## 1.3.2
 * change extended ascii dash ` ─ ` to normal dash `-` 
 so that it is displayed consistently in different encoding 

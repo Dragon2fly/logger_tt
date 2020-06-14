@@ -43,7 +43,7 @@ Example: `[2020-05-09 00:31:34] INFO: Making connection ...`
 
 * `urllib3` logger: this ready-made logger is to silent unwanted messages from `requests` library.
 * suppressed logger: `exchangelib`. This sets logging level of `exchangelib` logger to `WARNING`.<br>
-This is another ways to silent unwanted messages from other module, read below for details.
+This is another way to silent unwanted messages from other module, read below for details.
 
 * `root` logger: if there is no logger initialized in your module, this logger will be used with the above behaviors.
 This logger is also used to log **uncaught exception** in your project. Example:

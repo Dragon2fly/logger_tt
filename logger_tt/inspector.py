@@ -47,6 +47,11 @@ def get_repr(obj) -> str:
 
 
 def is_full_statement(*lines:str) -> bool:
+    """
+    Check if a set of lines makes up a full python statement
+    :param lines: list of line of python code
+    :return: True if line in `lines` made up a full python statement
+    """
     try:
         stream = StringIO()
         stream.write('\n'.join(lines))
@@ -62,6 +67,12 @@ def is_full_statement(*lines:str) -> bool:
 
 
 def get_full_statement(filename, lineno:int) -> list:
+    """
+    Get all lines of python file `filename` that makes up a full statement starting from `lineno`
+    :param filename: path to python source code file
+    :param lineno: line number at with the statement started
+    :return: list of all lines that made up a python statement with indent striped
+    """
     lines = []
     while True:
         line = linecache.getline(filename, lineno)

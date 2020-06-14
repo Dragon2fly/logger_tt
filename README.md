@@ -427,7 +427,7 @@ setup_logging(config_path="", log_path="",
 
 # changelog
 ## 1.3.2
-* change extended ascii dash ` － ` to normal dash `-` 
+* change extended ascii dash ` ─ ` to normal dash `-` 
 so that it is displayed consistently in different encoding 
 
 ## 1.3.1

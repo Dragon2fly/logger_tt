@@ -1,6 +1,9 @@
 __author__ = "Duc Tin"
 
 import re
+import tokenize
+import linecache
+from io import StringIO
 from traceback import StackSummary, walk_tb
 from logging import getLogger
 
@@ -43,6 +46,39 @@ def get_repr(obj) -> str:
     return _str_ if MEM_PATTERN.match(_repr_) else _repr_
 
 
+def is_full_statement(*lines:str) -> bool:
+    try:
+        stream = StringIO()
+        stream.write('\n'.join(lines))
+        stream.seek(0)
+        for t in tokenize.generate_tokens(stream.readline):
+            pass
+    except tokenize.TokenError as e:
+        if 'EOF in multi-line statement' in str(e):
+            return False
+        raise
+    else:
+        return True
+
+
+def get_full_statement(filename, lineno:int) -> list:
+    lines = []
+    while True:
+        line = linecache.getline(filename, lineno)
+        if not line:
+            break
+
+        lines.append(line)
+        if is_full_statement(*lines):
+            break
+
+        lineno += 1
+
+    lines[-1] = lines[-1].strip('\n')   # remove newline in last line
+    indent = re.search(r'^(\s+)', lines[0]).group(1)
+    return [x.replace(indent, '', 1) for x in lines]
+
+
 def analyze_frame(trace_back, full_context=False) -> str:
     """
     Read out variables' content surrounding the error line of code
@@ -51,7 +87,6 @@ def analyze_frame(trace_back, full_context=False) -> str:
     :return: string of analyzed frame
     """
     result = []
-    # todo: support multi-line statement
     # todo: add color
     for idx, obj in enumerate(walk_tb(trace_back)):
         frame, _ = obj
@@ -60,12 +95,22 @@ def analyze_frame(trace_back, full_context=False) -> str:
         local_var = frame.f_locals
 
         summary = StackSummary.extract([obj], capture_locals=True)[0]
-        txt = [f'  File "{summary.filename}", line {summary.lineno}, in {summary.name}',
-               f'    {summary.line}']
+        line = summary.line
+        if not is_full_statement(summary.line):
+            line = get_full_statement(summary.filename, summary.lineno)
+            line = '    '.join(line)
 
-        identifiers = ID_PATTERN.findall(summary.line)
-        outer = "(outer) " if idx else ""
+        txt = [f'  File "{summary.filename}", line {summary.lineno}, in {summary.name}',
+               f'    {line}']
+
+        identifiers = ID_PATTERN.findall(line)
+        seen = set()
+        outer = "(outer) " if idx else ""       # ground level variables are not outer for sure
         for i in identifiers:
+            if i in seen:
+                continue
+
+            seen.add(i)
             if i in local_var:
                 value = get_repr(local_var[i])
                 txt.append(f'     -> {i} = {value}')

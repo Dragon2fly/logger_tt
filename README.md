@@ -56,9 +56,9 @@ raise RecursionError
 Traceback (most recent call last):
   File "D:/MyProject/Echelon/eyes.py", line 13, in <module>
     raise RecursionError
-     => var_in = Customer(name='John', member_id=123456)
-     => arg = (456, 789)
-     => kwargs = {'my_kw': 'hello', 'another_kw': 'world'}
+    => var_in = Customer(name='John', member_id=123456)
+    => arg = (456, 789)
+    => kwargs = {'my_kw': 'hello', 'another_kw': 'world'}
 RecursionError
 ```
 
@@ -183,7 +183,8 @@ setup_logging(config_path="", log_path="",
        me = MyProfile('John Wick')
        boss = MyProfile('Winston')
        me.my_boss = boss
-       print(f'Information: {var} and {me.my_boss.name} at {me.my_boss.location} with {API_KEY}')
+       print(f'Information: {var} and {me.my_boss.name}' 
+              ' at {me.my_boss.location} with {API_KEY}')
    
    if __name__ == '__main__':
        cpu_no = 4
@@ -199,16 +200,22 @@ setup_logging(config_path="", log_path="",
    Traceback (most recent call last):
      File "D:/MyProject/AutoBanking/main.py", line 31, in <module>
        my_faulty_func(max_concurrent_processes, 'ryzen 7', freq=3.4)
-        -> my_faulty_func = <function my_faulty_func at 0x0000023770C6A288>
-        -> max_concurrent_processes = 3
+        ├─> my_faulty_func = <function my_faulty_func at 0x0000023770C6A288>
+        ├─> max_concurrent_processes = 3
    
      File "D:/MyProject/AutoBanking/main.py", line 25, in my_faulty_func
-       print(f'Information: {var} and {me.my_boss.name} at {me.my_boss.location} with {API_KEY}')
-        -> me.my_boss.name = 'Winston'
-        -> me.my_boss.location = '!!! Not Exists'
-        -> (outer) API_KEY = 'asdjhfbhbsdf82340hsdf09u3ionf98230234ilsfd'
+       print(f'Information: {var} and {me.my_boss.name}'
+              ' at {me.my_boss.location} with {API_KEY}')
+        ├─> me.my_boss.name = 'Winston'
+        ├─> me.my_boss.location = '!!! Not Exists'
+        ├─> (outer) API_KEY = 'asdjhfbhbsdf82340hsdf09u3ionf98230234ilsfd'
    NameError: name 'var' is not defined
    ```
+   
+   **Note**: look at the `print(f'Information...` line, 
+   `logger-tt` print this error line different from normal python traceback!
+   With normal traceback, multi-line python statement has its only first line printed out.
+   With `logger-tt`, full statement is grabbed for you.
    
    For each level in the stack, any object that appears in the error line is shown with its `readable representation`.
    This representation may not necessarily be `__repr__`. The choice between `__str__` and `__repr__` are as follows:
@@ -240,36 +247,36 @@ setup_logging(config_path="", log_path="",
    Traceback (most recent call last):
      File "D:/MyProject/AutoBanking/main.py", line 31, in <module>
        my_faulty_func(max_concurrent_processes, 'ryzen 7', freq=3.4)
-        -> my_faulty_func = <function my_faulty_func at 0x0000019E3599A288>
-        -> max_concurrent_processes = 3
-          => __name__ = '__main__'
-          => __doc__ = None
-          => __package__ = None
-          => __loader__ = <_frozen_importlib_external.SourceFileLoader object at 0x0000019E35840E48>
-          => __spec__ = None
-          => __annotations__ = {}
-          => __builtins__ = <module 'builtins' (built-in)>
-          => __file__ = 'D:/MyProject/AutoBanking/main.py'
-          => __cached__ = None
-          => setup_logging = <function setup_logging at 0x0000019E35D111F8>
-          => getLogger = <function getLogger at 0x0000019E35BC7C18>
-          => logger = <Logger __main__ (DEBUG)>
-          => API_KEY = 'asdjhfbhbsdf82340hsdf09u3ionf98230234ilsfd'
-          => TIMEOUT = 60
-          => MyProfile = <class '__main__.MyProfile'>
-          => cpu_no = 4
+        ├─> my_faulty_func = <function my_faulty_func at 0x0000019E3599A288>
+        ├─> max_concurrent_processes = 3
+        => __name__ = '__main__'
+        => __doc__ = None
+        => __package__ = None
+        => __loader__ = <_frozen_importlib_external.SourceFileLoader object at 0x0000019E35840E48>
+        => __spec__ = None
+        => __annotations__ = {}
+        => __builtins__ = <module 'builtins' (built-in)>
+        => __file__ = 'D:/MyProject/AutoBanking/main.py'
+        => __cached__ = None
+        => setup_logging = <function setup_logging at 0x0000019E35D111F8>
+        => getLogger = <function getLogger at 0x0000019E35BC7C18>
+        => logger = <Logger __main__ (DEBUG)>
+        => API_KEY = 'asdjhfbhbsdf82340hsdf09u3ionf98230234ilsfd'
+        => TIMEOUT = 60
+        => MyProfile = <class '__main__.MyProfile'>
+        => cpu_no = 4
    
      File "D:/MyProject/AutoBanking/main.py", line 25, in my_faulty_func
        print(f'Information: {var} and {me.my_boss.name} at {me.my_boss.location} with {API_KEY}')
-        -> me.my_boss.name = 'Winston'
-        -> me.my_boss.location = '!!! Not Exists'
-        -> (outer) API_KEY = 'asdjhfbhbsdf82340hsdf09u3ionf98230234ilsfd'
-          => my_var = 3
-          => args = ('ryzen 7',)
-          => kwargs = {'freq': 3.4}
-          => new_var = 'local scope variable'
-          => me = <__main__.MyProfile object at 0x0000019E35D3BA48>
-          => boss = <__main__.MyProfile object at 0x0000019E35D3B9C8>
+        ├─> me.my_boss.name = 'Winston'
+        ├─> me.my_boss.location = '!!! Not Exists'
+        ├─> (outer) API_KEY = 'asdjhfbhbsdf82340hsdf09u3ionf98230234ilsfd'
+        => my_var = 3
+        => args = ('ryzen 7',)
+        => kwargs = {'freq': 3.4}
+        => new_var = 'local scope variable'
+        => me = <__main__.MyProfile object at 0x0000019E35D3BA48>
+        => boss = <__main__.MyProfile object at 0x0000019E35D3B9C8>
    NameError: name 'var' is not defined
    ```
    
@@ -305,12 +312,12 @@ setup_logging(config_path="", log_path="",
    Traceback (most recent call last):
      File "D:/MyProject/exception_log.py", line 19, in my_main
        my_faulty_func()
-        -> my_faulty_func = <function my_faulty_func at 0x000001875DD4B168>
+        ├─> my_faulty_func = <function my_faulty_func at 0x000001875DD4B168>
    
      File "D:/MyProject/exception_log.py", line 13, in my_faulty_func
        c = a / b
-        -> a = 10
-        -> b = 0
+        ├─> a = 10
+        ├─> b = 0
    ZeroDivisionError: division by zero
    Clean up resource
    ```
@@ -419,6 +426,11 @@ setup_logging(config_path="", log_path="",
    ```
 
 # changelog
+## 1.3.0
+* Exception analyzing now fetch full multi-line python statement. 
+This means that variables lie at seconds and below of the same statement can also be seen 
+without the need of `full_context=True`.
+
 ## 1.2.1
 * Extend logging context to `logger.exception()` as well. 
 Now you can do `try-except` a block of code and still have a full context at error line. 

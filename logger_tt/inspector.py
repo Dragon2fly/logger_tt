@@ -99,6 +99,8 @@ def analyze_frame(trace_back, full_context=False) -> str:
     """
     result = []
     # todo: add color
+    bullet_1 = '├─>'
+    bullet_2 = '=>'
     for idx, obj in enumerate(walk_tb(trace_back)):
         frame, _ = obj
 
@@ -124,17 +126,17 @@ def analyze_frame(trace_back, full_context=False) -> str:
             seen.add(i)
             if i in local_var:
                 value = get_repr(local_var[i])
-                txt.append(f'     -> {i} = {value}')
+                txt.append(f'     {bullet_1} {i} = {value}')
             elif i in global_var:
                 value = get_repr(global_var[i])
-                txt.append(f'     -> {outer}{i} = {value}')
+                txt.append(f'     {bullet_1} {outer}{i} = {value}')
             elif '.' in i:
                 # class attribute access
                 instance = i.split('.')[0]
                 obj = local_var.get(instance, global_var.get(instance))
                 value = get_repr(get_recur_attr(obj, i[len(instance) + 1:]))
                 scope = outer if instance in global_var else ''
-                txt.append(f'     -> {scope}{i} = {value}')
+                txt.append(f'     {bullet_1} {scope}{i} = {value}')
             else:
                 # reserved Keyword or non-identifier, eg. word inside the string
                 pass
@@ -142,10 +144,8 @@ def analyze_frame(trace_back, full_context=False) -> str:
         if full_context or summary.line.strip().startswith("raise"):
             other_local_var = set(local_var) - set(identifiers)
             if other_local_var:
-                # txt.append('     ┌──────────────────────────┐')
-                # txt.append('     │ => other local variables │')
-                # txt.append('     └──────────────────────────┘')
-                txt.extend([f'       => {k} = {get_repr(v)}' for k, v in local_var.items() if k in other_local_var])
+                txt.extend([f'     {bullet_2} {k} = {get_repr(v)}'
+                            for k, v in local_var.items() if k in other_local_var])
 
         txt.append('')
         result.append('\n'.join(txt))

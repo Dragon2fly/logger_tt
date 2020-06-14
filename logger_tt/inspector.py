@@ -99,7 +99,7 @@ def analyze_frame(trace_back, full_context=False) -> str:
     """
     result = []
     # todo: add color
-    bullet_1 = '├─>'
+    bullet_1 = '|─>'
     bullet_2 = '=>'
     for idx, obj in enumerate(walk_tb(trace_back)):
         frame, _ = obj

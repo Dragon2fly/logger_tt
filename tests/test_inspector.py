@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from subprocess import run
 
@@ -111,3 +112,16 @@ def test_multiline():
     assert "self.value = 3" in data
     assert "self.non_exist = '!!! Not Exists'" in data
     assert "self.base.name = 'Nested dot'" in data
+
+
+def test_multiline2():
+    cmd = ["python", "exception_multiline2.py"]
+    run(cmd)
+
+    data = log.read_text(encoding='utf8')
+    res = re.findall(r'( *ehehe)', data)
+    indent_1 = res[0].count(' ')
+    indent_2 = res[1].count(' ')
+
+    assert indent_1 == 13
+    assert indent_2 == 27

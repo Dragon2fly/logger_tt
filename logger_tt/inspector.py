@@ -34,7 +34,7 @@ def get_recur_attr(obj, attr: str):
         return get_recur_attr(obj, next_levels[0])
 
 
-def get_repr(obj) -> str:
+def get_repr(obj, multiline_indent=0) -> str:
     """
     Pick a more useful representation of object `obj` between __str__ and __repr__
      if it available.
@@ -42,7 +42,10 @@ def get_repr(obj) -> str:
     :return: string of object representation
     """
     _repr_ = repr(obj)
-    _str_ = str(obj)
+    _str_ = str(obj).replace('\r\n', '\n')
+    if '\n' in _str_:
+        indent = ' ' * multiline_indent
+        _str_ = _str_.replace('\n', '\n'+indent)
     return _str_ if MEM_PATTERN.match(_repr_) else _repr_
 
 
@@ -86,8 +89,12 @@ def get_full_statement(filename, lineno:int) -> list:
         lineno += 1
 
     lines[-1] = lines[-1].strip('\n')   # remove newline in last line
-    indent = re.search(r'^(\s+)', lines[0]).group(1)
-    return [x.replace(indent, '', 1) for x in lines]
+    indent = re.search(r'^(\s+)', lines[0])
+    if indent:
+        indent = indent.group(1)
+        return [x.replace(indent, '', 1) for x in lines]
+    else:
+        return lines
 
 
 def analyze_frame(trace_back, full_context=False) -> str:
@@ -101,6 +108,8 @@ def analyze_frame(trace_back, full_context=False) -> str:
     # todo: add color
     bullet_1 = '|->'
     bullet_2 = '=>'
+    multi_line_indent1 = 8 + len(bullet_1)
+    multi_line_indent2 = 8 + len(bullet_2)
     for idx, obj in enumerate(walk_tb(trace_back)):
         frame, _ = obj
 
@@ -124,17 +133,21 @@ def analyze_frame(trace_back, full_context=False) -> str:
                 continue
 
             seen.add(i)
+            spaces = multi_line_indent1 + len(i)
             if i in local_var:
-                value = get_repr(local_var[i])
+                value = get_repr(local_var[i], spaces)
                 txt.append(f'     {bullet_1} {i} = {value}')
             elif i in global_var:
-                value = get_repr(global_var[i])
+                spaces += len(outer)
+                value = get_repr(global_var[i], spaces)
                 txt.append(f'     {bullet_1} {outer}{i} = {value}')
             elif '.' in i:
                 # class attribute access
+                spaces += len(outer)
                 instance = i.split('.')[0]
                 obj = local_var.get(instance, global_var.get(instance))
-                value = get_repr(get_recur_attr(obj, i[len(instance) + 1:]))
+                attribute = get_recur_attr(obj, i[len(instance) + 1:])
+                value = get_repr(attribute, spaces)
                 scope = outer if instance in global_var else ''
                 txt.append(f'     {bullet_1} {scope}{i} = {value}')
             else:
@@ -144,7 +157,8 @@ def analyze_frame(trace_back, full_context=False) -> str:
         if full_context or summary.line.strip().startswith("raise"):
             other_local_var = set(local_var) - set(identifiers)
             if other_local_var:
-                txt.extend([f'     {bullet_2} {k} = {get_repr(v)}'
+                spaces = multi_line_indent2
+                txt.extend([f'     {bullet_2} {k} = {get_repr(v, spaces + len(k))}'
                             for k, v in local_var.items() if k in other_local_var])
 
         txt.append('')

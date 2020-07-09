@@ -33,8 +33,12 @@ def log_level(message):
 
 def is_print_called():
     for frame in inspect.stack():
-        context = frame.code_context[0].strip()
-        if re.match(r'print\(.*\)', context):
+        context = frame.code_context
+        if not context:
+            continue
+
+        context = context[0].strip()
+        if re.match(r'print\(.*\)?', context):
             return True
     return False
 

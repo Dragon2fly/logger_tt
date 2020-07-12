@@ -29,16 +29,19 @@ def get_recur_attr(obj, attr: str):
             return getattr(obj, this_level)
         except AttributeError:
             return "!!! Not Exists"
+        except Exception as e:
+            return f"!!! Attribute Error: {e}"
     else:
         obj = getattr(obj, this_level)
         return get_recur_attr(obj, next_levels[0])
 
 
-def get_repr(obj, multiline_indent=0) -> str:
+def get_repr(obj, multiline_indent:int=0) -> str:
     """
     Pick a more useful representation of object `obj` between __str__ and __repr__
      if it available.
     :param obj: any of object
+    :param multiline_indent: indent level for the second line onward
     :return: string of object representation
     """
     _repr_ = repr(obj)

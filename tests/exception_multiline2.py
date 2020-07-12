@@ -17,11 +17,11 @@ class Tummy:
         self.dummy = Dummy()
 
 
-a = Tummy()
-
-
-def aloha():
+def aloha(a):
     b = Dummy()
     c = b / a.dummy
 
-aloha()
+
+if __name__ == '__main__':
+    a = Tummy()
+    aloha(a)

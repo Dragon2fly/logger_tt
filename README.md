@@ -469,6 +469,12 @@ setup_logging(config_path="", log_path="",
    ```
 
 # changelog
+## 1.4.1
+* Fix `print_capture` ignoring `print()` line in global scope due to lacking `code_context` frame
+* If `__str__` of an object has multiple lines, also indent the second line and so on accordingly.
+* If there is an exception during getting object's representation, 
+return `!!! Attribute error` instead of `Error in sys.excepthook`
+
 ## 1.4.0
 * Add an extra field `suppress` in config file. 
 Any logger's name appeared in this list will have its messages suppressed.

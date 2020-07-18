@@ -38,6 +38,11 @@ def handle_exception(exc_type, exc_value, exc_traceback):
                   f"{txt}",
                   exc_info=(exc_type, exc_value, None))
 
+    # As interpreter is going to shutdown after this function,
+    # objects are getting deleted.
+    # Disable further logging to prevent NameError exception
+    logging.disable(logging.CRITICAL)
+
 
 def ensure_path(config: dict, override_log_path: str = ""):
     """ensure log path exists"""

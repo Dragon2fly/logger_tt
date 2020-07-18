@@ -1,13 +1,14 @@
 __author__ = "Duc Tin"
 
 import re
+import logging
 import tokenize
 import linecache
 from io import StringIO
+from contextlib import contextmanager
 from traceback import StackSummary, walk_tb
-from logging import getLogger
 
-logger = getLogger(__name__)
+
 ID_PATTERN = re.compile(r'([a-zA-Z_][a-zA-Z_0-9.]*)')
 MEM_PATTERN = re.compile(r'<.*object at 0x[0-9A-F]+>')
 
@@ -44,12 +45,23 @@ def get_repr(obj, multiline_indent:int=0) -> str:
     :param multiline_indent: indent level for the second line onward
     :return: string of object representation
     """
-    _repr_ = repr(obj)
-    _str_ = str(obj).replace('\r\n', '\n')
-    if '\n' in _str_:
-        indent = ' ' * multiline_indent
-        _str_ = _str_.replace('\n', '\n'+indent)
-    return _str_ if MEM_PATTERN.match(_repr_) else _repr_
+    try:
+        _repr_ = repr(obj)
+        if not MEM_PATTERN.match(_repr_):
+            return _repr_
+    except Exception as e:
+        _repr_ = f"!!! repr error: {e}"
+
+    try:
+        _str_ = str(obj).replace('\r\n', '\n')
+        if '\n' in _str_:
+            indent = ' ' * multiline_indent
+            _str_ = _str_.replace('\n', '\n' + indent)
+
+        return _str_
+
+    except Exception as e:
+        return _repr_
 
 
 def is_full_statement(*lines:str) -> bool:
@@ -100,6 +112,13 @@ def get_full_statement(filename, lineno:int) -> list:
         return lines
 
 
+@contextmanager
+def logging_disabled():
+    logging.disable(logging.CRITICAL)
+    yield
+    logging.disable(logging.NOTSET)
+
+
 def analyze_frame(trace_back, full_context=False) -> str:
     """
     Read out variables' content surrounding the error line of code
@@ -107,65 +126,66 @@ def analyze_frame(trace_back, full_context=False) -> str:
     :param full_context: Also export local variables that is not in the error line
     :return: string of analyzed frame
     """
-    result = []
-    # todo: add color
-    bullet_1 = '|->'
-    bullet_2 = '=>'
-    multi_line_indent1 = 8 + len(bullet_1)
-    multi_line_indent2 = 8 + len(bullet_2)
-    for idx, obj in enumerate(walk_tb(trace_back)):
-        frame, _ = obj
+    with logging_disabled():
+        result = []
+        # todo: add color
+        bullet_1 = '|->'
+        bullet_2 = '=>'
+        multi_line_indent1 = 8 + len(bullet_1)
+        multi_line_indent2 = 8 + len(bullet_2)
+        for idx, obj in enumerate(walk_tb(trace_back)):
+            frame, _ = obj
 
-        global_var = frame.f_globals
-        local_var = frame.f_locals
+            global_var = frame.f_globals
+            local_var = frame.f_locals
 
-        summary = StackSummary.extract([obj], capture_locals=True)[0]
-        line = summary.line
-        if not is_full_statement(summary.line):
-            line = get_full_statement(summary.filename, summary.lineno)
-            line = '    '.join(line)
+            summary = StackSummary.extract([obj], capture_locals=True)[0]
+            line = summary.line
+            if not is_full_statement(summary.line):
+                line = get_full_statement(summary.filename, summary.lineno)
+                line = '    '.join(line)
 
-        txt = [f'  File "{summary.filename}", line {summary.lineno}, in {summary.name}',
-               f'    {line}']
+            txt = [f'  File "{summary.filename}", line {summary.lineno}, in {summary.name}',
+                   f'    {line}']
 
-        identifiers = ID_PATTERN.findall(line)
-        seen = set()
-        outer = "(outer) " if idx else ""       # ground level variables are not outer for sure
-        for i in identifiers:
-            if i in seen:
-                continue
+            identifiers = ID_PATTERN.findall(line)
+            seen = set()
+            outer = "(outer) " if idx else ""       # ground level variables are not outer for sure
+            for i in identifiers:
+                if i in seen:
+                    continue
 
-            seen.add(i)
-            spaces = multi_line_indent1 + len(i)
-            if i in local_var:
-                value = get_repr(local_var[i], spaces)
-                txt.append(f'     {bullet_1} {i} = {value}')
-            elif i in global_var:
-                spaces += len(outer)
-                value = get_repr(global_var[i], spaces)
-                txt.append(f'     {bullet_1} {outer}{i} = {value}')
-            elif '.' in i:
-                # class attribute access
-                spaces += len(outer)
-                instance = i.split('.')[0]
-                obj = local_var.get(instance, global_var.get(instance))
-                attribute = get_recur_attr(obj, i[len(instance) + 1:])
-                value = get_repr(attribute, spaces)
-                scope = outer if instance in global_var else ''
-                txt.append(f'     {bullet_1} {scope}{i} = {value}')
-            else:
-                # reserved Keyword or non-identifier, eg. word inside the string
-                pass
+                seen.add(i)
+                spaces = multi_line_indent1 + len(i)
+                if i in local_var:
+                    value = get_repr(local_var[i], spaces)
+                    txt.append(f'     {bullet_1} {i} = {value}')
+                elif i in global_var:
+                    spaces += len(outer)
+                    value = get_repr(global_var[i], spaces)
+                    txt.append(f'     {bullet_1} {outer}{i} = {value}')
+                elif '.' in i:
+                    # class attribute access
+                    spaces += len(outer)
+                    instance = i.split('.')[0]
+                    obj = local_var.get(instance, global_var.get(instance))
+                    attribute = get_recur_attr(obj, i[len(instance) + 1:])
+                    value = get_repr(attribute, spaces)
+                    scope = outer if instance in global_var else ''
+                    txt.append(f'     {bullet_1} {scope}{i} = {value}')
+                else:
+                    # reserved Keyword or non-identifier, eg. word inside the string
+                    pass
 
-        if full_context or summary.line.strip().startswith("raise"):
-            other_local_var = set(local_var) - set(identifiers)
-            if other_local_var:
-                spaces = multi_line_indent2
-                txt.extend([f'     {bullet_2} {k} = {get_repr(v, spaces + len(k))}'
-                            for k, v in local_var.items() if k in other_local_var])
+            if full_context or summary.line.strip().startswith("raise"):
+                other_local_var = set(local_var) - set(identifiers)
+                if other_local_var:
+                    spaces = multi_line_indent2
+                    txt.extend([f'     {bullet_2} {k} = {get_repr(v, spaces + len(k))}'
+                                for k, v in local_var.items() if k in other_local_var])
 
-        txt.append('')
-        result.append('\n'.join(txt))
+            txt.append('')
+            result.append('\n'.join(txt))
 
     return '\n'.join(result)
 

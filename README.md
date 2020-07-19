@@ -469,6 +469,15 @@ setup_logging(config_path="", log_path="",
    ```
 
 # changelog
+## 1.4.2
+To prevent exception during logging, the following actions have been applied:
+* Catch exception while parsing for object's value (property of a class)
+* Catch exception while evaluating `__repr__` and `__str__` of object
+* Disable logging while inspecting objects' value and representation
+* Disable logging after an uncaught exception is logged. 
+  Because the interpreter is shutting down, objects get deleted. 
+  Logging put inside magic function `__del__` will raise error.
+
 ## 1.4.1
 * Fix `print_capture` ignoring `print()` line in global scope due to lacking `code_context` frame
 * If `__str__` of an object has multiple lines, also indent the second line and so on accordingly.

@@ -3,23 +3,14 @@ import logging
 import json
 from pathlib import Path
 from logging.config import dictConfig
-from dataclasses import dataclass
-from functools import partial
-from .capture import PrintCapture
 from .inspector import analyze_frame
-
+from .core import LogConfig
 
 __author__ = "Duc Tin"
 __all__ = ['setup_logging']
 
 
 """Config log from file and make it also logs uncaught exception"""
-
-
-@dataclass()
-class LogConfig:
-    full_context:bool = False
-
 
 internal_config = LogConfig()
 
@@ -65,19 +56,11 @@ def load_from_file(f: Path) -> dict:
             return json.load(fp)
 
 
-def suppress_logger(loggers, suppress_level_below):
-    if not loggers:
-        return
-
-    for name in loggers:
-        logger = logging.getLogger(name)
-        logger.level = suppress_level_below
-
-
 def setup_logging(config_path="", log_path="",
                   capture_print=False, strict=False, guess_level=False,
                   full_context=False,
-                  suppress_level_below=logging.WARNING):
+                  suppress_level_below=logging.WARNING,
+                  use_multiprocessing=False) -> LogConfig:
     """Setup logging configuration
         :param config_path: Path to log config file. Use default config if this is not provided
         :param log_path: Path to store log file. Override 'filename' field of 'handlers' in
@@ -89,6 +72,9 @@ def setup_logging(config_path="", log_path="",
         :param full_context: whether to log full local scope on exception or not
         :param suppress_level_below: For logger in the suppress list, any message below this level
             is not processed, not printed out nor logged to file
+        :param use_multiprocessing: set this to True if your code use multiprocessing. This flag
+            switches the queue used for logging from queue.Queue to multiprocessing.Queue .
+            This option can only be used here.
     """
     if config_path:
         path = Path(config_path)
@@ -101,17 +87,29 @@ def setup_logging(config_path="", log_path="",
     # load config from file
     config = load_from_file(path)
     ensure_path(config, log_path)
-    suppress_logger(config.pop('suppress', None), suppress_level_below)
+
+    # suppress
+    internal_config.suppress_level_below = suppress_level_below
+    internal_config.suppress_logger(config.pop('suppress', None))
+
+    # initialize
     logging.config.dictConfig(config)
 
     # set internal config
     internal_config.full_context = full_context
+    internal_config.strict = strict
+    internal_config.guess_level = guess_level
+    internal_config.capture_print = capture_print
+
+    # start queue_handler_listener
+    root_logger = logging.getLogger()
+    internal_config.init_queue(use_multiprocessing)
+    internal_config.replace_with_queue_handler(root_logger)
 
     # capture other messages
-    sys.excepthook = partial(handle_exception)
-    if capture_print:
-        sys.stdout = PrintCapture(sys.stdout, strict=strict, guess_level=guess_level)
+    sys.excepthook = handle_exception
     logging.debug('New log started'.center(50, '_'))
+    return internal_config
 
 
 class ExceptionLogger(logging.Logger):

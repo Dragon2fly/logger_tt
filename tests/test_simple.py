@@ -1,6 +1,7 @@
 import logging
 import re
 import sys
+import time
 from logging import getLogger
 from pathlib import Path
 
@@ -14,13 +15,12 @@ log = Path.cwd() / 'logs/log.txt'
 
 
 def test_basic_function(capsys):
-    setup_logging()
-
-    logger.debug('my debug')
-    logger.info('my info')
-    logger.warning('my warning')
-    logger.error('my error')
-    logger.critical('the market crashed')
+    with setup_logging():
+        logger.debug('my debug')
+        logger.info('my info')
+        logger.warning('my warning')
+        logger.error('my error')
+        logger.critical('the market crashed')
 
     # check stdout
     captured = capsys.readouterr()
@@ -41,11 +41,10 @@ def test_basic_function(capsys):
 
 
 def test_capture_print_not_strict(capsys):
-    setup_logging(capture_print=True)
-
-    print('This is my print')
-    sys.stdout.write('\n')
-    sys.stdout.write('This should be printed normally')
+    with setup_logging(capture_print=True):
+        print('This is my print')
+        sys.stdout.write('\n')
+        sys.stdout.write('This should be printed normally')
 
     stdout_data = capsys.readouterr().out
     log_data = log.read_text()
@@ -59,10 +58,9 @@ def test_capture_print_not_strict(capsys):
 
 
 def test_capture_print_strict(capsys):
-    setup_logging(capture_print=True, strict=True)
-
-    print('This is my print')
-    sys.stdout.write('This should be printed normally too')
+    with setup_logging(capture_print=True, strict=True):
+        print('This is my print')
+        sys.stdout.write('This should be printed normally too')
 
     stdout_data = capsys.readouterr().out
     log_data = log.read_text()
@@ -80,21 +78,21 @@ def test_capture_print_strict(capsys):
                                  ('critical', 'jkl Critical: system is overheating'),
                                  ('debug', 'mno DEBUG: ha ha ha')])
 def test_guess_message_level(msg):
-    setup_logging(capture_print=True, guess_level=True)
+    with setup_logging(capture_print=True, guess_level=True):
+        level, msg = msg
+        print(msg)
 
-    level, msg = msg
-    print(msg)
     log_data = log.read_text().splitlines()[-1].lower()
     assert log_data.count(level) == 2
 
 
 @pytest.mark.parametrize("level", [logging.WARNING, logging.ERROR])
 def test_suppress_logger(capsys, level):
-    setup_logging(suppress_level_below=level)
+    with setup_logging(suppress_level_below=level):
+        from tests.exchangelib_logger import fox_run
 
-    from tests.exchangelib_logger import fox_run
+        fox_run()
 
-    fox_run()
     stdout_data = capsys.readouterr().out
     assert 'DEBUG' not in stdout_data
     assert 'INFO' not in stdout_data

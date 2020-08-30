@@ -33,7 +33,10 @@ def get_recur_attr(obj, attr: str):
         except Exception as e:
             return f"!!! Attribute Error: {e}"
     else:
-        obj = getattr(obj, this_level)
+        try:
+            obj = getattr(obj, this_level)
+        except AttributeError:
+            return "!!! Not Exists"
         return get_recur_attr(obj, next_levels[0])
 
 
@@ -119,6 +122,16 @@ def logging_disabled():
     logging.disable(logging.NOTSET)
 
 
+def get_traceback_depth(trace_back) -> int:
+    count = 0
+    tb = trace_back
+    while tb is not None:
+        tb = tb.tb_next
+        count += 1
+
+    return count
+
+
 def analyze_frame(trace_back, full_context=False) -> str:
     """
     Read out variables' content surrounding the error line of code
@@ -126,13 +139,15 @@ def analyze_frame(trace_back, full_context=False) -> str:
     :param full_context: Also export local variables that is not in the error line
     :return: string of analyzed frame
     """
+    result = []
+    # todo: add color
+    bullet_1 = '|->'
+    bullet_2 = '=>'
+    multi_line_indent1 = 8 + len(bullet_1)
+    multi_line_indent2 = 8 + len(bullet_2)
+    depth = get_traceback_depth(trace_back)
+
     with logging_disabled():
-        result = []
-        # todo: add color
-        bullet_1 = '|->'
-        bullet_2 = '=>'
-        multi_line_indent1 = 8 + len(bullet_1)
-        multi_line_indent2 = 8 + len(bullet_2)
         for idx, obj in enumerate(walk_tb(trace_back)):
             frame, _ = obj
 
@@ -148,11 +163,16 @@ def analyze_frame(trace_back, full_context=False) -> str:
             txt = [f'  File "{summary.filename}", line {summary.lineno}, in {summary.name}',
                    f'    {line}']
 
+            if idx+1 != depth:
+                txt.append('')
+                result.append('\n'.join(txt))
+                continue
+
             identifiers = ID_PATTERN.findall(line)
             seen = set()
             outer = "(outer) " if idx else ""       # ground level variables are not outer for sure
             for i in identifiers:
-                if i in seen:
+                if i in seen or i.endswith('.'):
                     continue
 
                 seen.add(i)

@@ -3,7 +3,7 @@ from logging import getLogger
 
 
 __author__ = "Duc Tin"
-setup_logging()
+setup_logging(full_context=1)
 logger = getLogger(__name__)
 
 

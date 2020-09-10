@@ -45,7 +45,7 @@ class LogConfig:
         """Select logging method according to platform and multiprocessing"""
         os_name = platform.system()
 
-        if os_name == 'Linux' or not use_multiprocessing:
+        if not use_multiprocessing:
             # for normal usage, thread queue is more than enough
             self.qclass = thQueue
             self.replace_with_queue_handler()

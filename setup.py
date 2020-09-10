@@ -5,7 +5,7 @@ with open('README.md', encoding='utf8') as fi:
 
 setup(
     name='logger_tt',
-    version='1.4.2',
+    version='1.5',
     packages=['logger_tt'],
     url='https://github.com/Dragon2fly/logger_tt',
     package_data={'': ['log_config.json', 'log_config.yaml']},
@@ -14,7 +14,7 @@ setup(
     platforms=["Any platform -- don't need Windows"],
     author='Nguyen Ba Duc Tin',
     author_email='nguyenbaduc.tin@gmail.com',
-    description='Make logging simple, log even exception that you forgot to catch',
+    description='Make logging simple, log even exception that you forgot to catch. Multiprocessing logging is a breeze',
     long_description=long_description,
     long_description_content_type='text/markdown',
     classifiers=[

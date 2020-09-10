@@ -1,5 +1,6 @@
 # Logger_tt
-Make configuring logging simpler and log even exceptions that you forgot to catch.
+Make configuring logging simpler and log even exceptions that you forgot to catch. 
+Even multiprocessing logging becomes a breeze.
 
 ## Install
 * From PYPI: `pip install logger_tt`
@@ -12,7 +13,7 @@ In the most simple case, add the following code into your main python script of 
 ```python
 from logger_tt import setup_logging    
 
-setup_logging()
+setup_logging(full_context=1)
 ```
 
 Then from any of your modules, you just need to get a `logger` and start logging.
@@ -65,8 +66,8 @@ RecursionError
 ```
 
 * context logging: When an exception occur, variables used in the line of error are also logged.<br>
-If the line of error is `raise {SomeException}`, then local variables are also logged.<br>
-To always log full local variables, pass `full_context=True` to `setup_logging`.
+To log full local variables of current function scope, pass `full_context=1` to `setup_logging`.<br>
+If you need the outer scope too, set `full_context` to `2`, `3` and so on...
 
 
 ## Usage:
@@ -75,7 +76,8 @@ All configs are done through `setup_logging` function:
 setup_logging(config_path="", log_path="", 
               capture_print=False, strict=False, guess_level=False,
               full_context=False,
-              suppress_level_below=logging.WARNING)
+              suppress_level_below=logging.WARNING,
+              use_multiprocessing=False)
 ```
 
 
@@ -367,6 +369,65 @@ setup_logging(config_path="", log_path="",
      
          setup_logging(suppress_level_below=logging.ERROR)
 
+7. Logging in multiprocessing:
+    
+    This is archived by using multiprocessing queues or a socket server. 
+    For linux, copy-on-write while forking carries over logger's information. 
+    So `multiprocess.Queue` is enough in this case. 
+    
+    For Windows, it is important that `setup_logging()` must be call out side of `if __name__ == '__main__':` guard block.
+    Because child processes run from scratch and re-import `__main__`, by re-executing `setup_logging()`, 
+    logger `SocketHandler` can be setup automatically. 
+    This also means that the same config can work with both `multiprocessing.Process` and `multiprocessing.Pool` 
+    magically without user doing anything special.
+    Below is a minimal example:
+    
+    ```python
+    import time
+    from random import randint
+    from multiprocessing import Process
+   
+    from logger_tt import setup_logging
+    from logging import getLogger
+    
+    logger = getLogger(__name__)
+    setup_logging(use_multiprocessing=True)        # for Windows, this line must be outside of guard block
+    
+    
+    def worker(arg):
+        logger.info(f'child process {arg}: started')
+        time.sleep(randint(1,10))   # imitate time consuming process
+        logger.info(f'child process {arg}: stopped')
+    
+    
+    if __name__ == '__main__':
+        all_processes = []
+        logger.info('Parent process is ready to spawn child')
+        for i in range(3):
+            p = Process(target=worker, args=(i,))
+            all_processes.append(p)
+            p.daemon = True
+            p.start()
+    
+        for p in all_processes:
+            p.join()
+    ```
+    
+    The content of `log.txt` should be similar to below:
+    
+    ```text
+    [2020-09-11 00:06:14] [root DEBUG] _________________New log started__________________
+    [2020-09-11 00:06:14] [root DEBUG] Start logging server ...
+    [2020-09-11 00:06:15] [__main__ INFO] Parent process is ready to spawn child
+    [2020-09-11 00:06:16] [__mp_main__ INFO] child process 1: started
+    [2020-09-11 00:06:16] [__mp_main__ INFO] child process 0: started
+    [2020-09-11 00:06:16] [__mp_main__ INFO] child process 2: started
+    [2020-09-11 00:06:17] [__mp_main__ INFO] child process 1: stopped
+    [2020-09-11 00:06:17] [__mp_main__ INFO] child process 2: stopped
+    [2020-09-11 00:06:17] [__mp_main__ INFO] child process 0: stopped
+    ```
+
+
 # Sample config:
 
 1. Yaml format:
@@ -469,6 +530,17 @@ setup_logging(config_path="", log_path="",
    ```
 
 # changelog
+## 1.5.0
+* Logging is off-load to another thread and uses Queue to communicate. 
+  It allow critical thread can do there job why time-consuming logging can be done later or in parallel. 
+* Support multiprocessing logging. For linux, a multiprocessing queue is used. 
+  For Windows and macOS, a socket server is used instead.  
+* `setup_logging` now return a `LogConfig` object. 
+   You can set/change parameters of this object instead of passing arguments directly to `setup_logging`.
+* `full_context` is now an `int` that indicate the depth level from the bottom,
+   where surrounding variables should be parsed. 
+* Turned off parsing full context for `raise` exception since many exception names are enough to understand the problem. 
+
 ## 1.4.2
 To prevent exception during logging, the following actions have been applied:
 * Catch exception while parsing for object's value (property of a class)

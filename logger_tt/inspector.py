@@ -132,20 +132,24 @@ def get_traceback_depth(trace_back) -> int:
     return count
 
 
-def analyze_frame(trace_back, full_context=False) -> str:
+def analyze_frame(trace_back, full_context:int=False) -> str:
     """
     Read out variables' content surrounding the error line of code
     :param trace_back: A traceback object when exception occur
     :param full_context: Also export local variables that is not in the error line
+            full_context == 0: export only variables that appear on the error line
+            full_context == 1: export variables within the error function's scope
+            full_context >= 2: export variables along the function's call stack up to `full_context` level
     :return: string of analyzed frame
     """
     result = []
+    full_context = max(0, int(full_context))
     # todo: add color
     bullet_1 = '|->'
     bullet_2 = '=>'
     multi_line_indent1 = 8 + len(bullet_1)
     multi_line_indent2 = 8 + len(bullet_2)
-    depth = get_traceback_depth(trace_back)
+    stack_depth = get_traceback_depth(trace_back)
 
     with logging_disabled():
         for idx, obj in enumerate(walk_tb(trace_back)):
@@ -163,11 +167,15 @@ def analyze_frame(trace_back, full_context=False) -> str:
             txt = [f'  File "{summary.filename}", line {summary.lineno}, in {summary.name}',
                    f'    {line}']
 
-            if idx+1 != depth:
+            # todo: dump all level to different file?
+            parse_level = max(full_context-1, 0)
+            if idx+1 < (stack_depth-parse_level):
+                # don't parse variables for top levels
                 txt.append('')
                 result.append('\n'.join(txt))
                 continue
 
+            # get value of variables on the error line
             identifiers = ID_PATTERN.findall(line)
             seen = set()
             outer = "(outer) " if idx else ""       # ground level variables are not outer for sure
@@ -197,7 +205,8 @@ def analyze_frame(trace_back, full_context=False) -> str:
                     # reserved Keyword or non-identifier, eg. word inside the string
                     pass
 
-            if full_context or summary.line.strip().startswith("raise"):
+            # get value of other variables within local scope
+            if full_context:
                 other_local_var = set(local_var) - set(identifiers)
                 if other_local_var:
                     spaces = multi_line_indent2

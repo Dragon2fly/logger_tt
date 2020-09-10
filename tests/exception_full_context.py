@@ -1,9 +1,10 @@
+import sys
 from logger_tt import setup_logging
 from logging import getLogger
 
 
 __author__ = "Duc Tin"
-setup_logging(full_context=True)
+setup_logging(full_context=int(sys.argv[1]))
 logger = getLogger(__name__)
 
 

@@ -96,8 +96,30 @@ def test_nested_2():
     assert "self.base.name = 'Nested dot'" in data
 
 
-def test_full_context():
-    cmd = ["python", "exception_full_context.py"]
+def test_full_context_level1():
+    cmd = ["python", "exception_full_context.py", "1"]
+    run(cmd)
+
+    data = log.read_text(encoding='utf8')
+    assert "__name__ = '__main__'" not in data
+    assert "Base = <class '__main__.Base'>" not in data
+    assert "arg = (456, 789)" not in data
+    assert "arg = 345" in data
+
+
+def test_full_context_level2():
+    cmd = ["python", "exception_full_context.py", "2"]
+    run(cmd)
+
+    data = log.read_text(encoding='utf8')
+    assert "__name__ = '__main__'" not in data
+    assert "Base = <class '__main__.Base'>" not in data
+    assert "arg = (456, 789)" in data
+    assert "arg = 345" in data
+
+
+def test_full_context_level3():
+    cmd = ["python", "exception_full_context.py", "3"]
     run(cmd)
 
     data = log.read_text(encoding='utf8')

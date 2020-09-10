@@ -242,7 +242,7 @@ setup_logging(config_path="", log_path="",
    `logger-tt` is here with you:
    
    ```python
-   setup_logging(full_context=True)
+   setup_logging(full_context=2)
    ```
    
    With the above hypothetical code snippet, the error log becomes the following:

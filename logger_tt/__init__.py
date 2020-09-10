@@ -5,6 +5,7 @@ from pathlib import Path
 from logging.config import dictConfig
 from .inspector import analyze_frame
 from .core import LogConfig
+from multiprocessing import current_process
 
 __author__ = "Duc Tin"
 __all__ = ['setup_logging']
@@ -69,7 +70,7 @@ def setup_logging(config_path="", log_path="",
         :param strict: only used when capture_print is True. If strict is True, then log
             everything that use sys.stdout.write().
         :param guess_level: auto guess logging level of captured message
-        :param full_context: whether to log full local scope on exception or not
+        :param full_context: int, whether to log full local scope on exception or not and up to what level
         :param suppress_level_below: For logger in the suppress list, any message below this level
             is not processed, not printed out nor logged to file
         :param use_multiprocessing: set this to True if your code use multiprocessing. This flag
@@ -101,14 +102,14 @@ def setup_logging(config_path="", log_path="",
     internal_config.guess_level = guess_level
     internal_config.capture_print = capture_print
 
-    # start queue_handler_listener
-    root_logger = logging.getLogger()
-    internal_config.init_queue(use_multiprocessing)
-    internal_config.replace_with_queue_handler(root_logger)
+    if current_process().name == 'MainProcess':
+        logging.debug('New log started'.center(50, '_'))
+
+    # set logging mode accordingly
+    internal_config.set_mode(use_multiprocessing)
 
     # capture other messages
     sys.excepthook = handle_exception
-    logging.debug('New log started'.center(50, '_'))
     return internal_config
 
 

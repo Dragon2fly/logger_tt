@@ -10,7 +10,7 @@ from traceback import StackSummary, walk_tb
 
 
 ID_PATTERN = re.compile(r'([a-zA-Z_][a-zA-Z_0-9.]*)')
-MEM_PATTERN = re.compile(r'<.*object at 0x[0-9A-F]+>')
+MEM_PATTERN = re.compile(r'<.*object at 0x[0-9A-Fa-f]+>')
 
 
 def get_recur_attr(obj, attr: str):

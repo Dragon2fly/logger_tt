@@ -88,10 +88,11 @@ def setup_logging(config_path="", log_path="",
     # load config from file
     config = load_from_file(path)
     ensure_path(config, log_path)
+    logger_tt_config = config.pop('logger_tt', {})
 
     # suppress
     internal_config.suppress_level_below = suppress_level_below
-    internal_config.suppress_logger(config.pop('suppress', None))
+    internal_config.suppress_logger(logger_tt_config.get('suppress'))
 
     # initialize
     logging.config.dictConfig(config)

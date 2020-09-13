@@ -473,7 +473,8 @@ setup_logging(config_path="", log_path="",
      level: DEBUG
      handlers: [console, error_file_handler]
    
-   suppress: [exchangelib]
+   logger_tt: 
+     suppress: [exchangelib]
    ```
 
 <br>
@@ -528,7 +529,9 @@ setup_logging(config_path="", log_path="",
        "handlers": ["console", "error_file_handler"]
      },
 
-     "suppress": ["exchangelib"]
+     "logger_tt": {
+        "suppress": ["exchangelib"]
+  }
    }
    ```
 
@@ -541,9 +544,15 @@ setup_logging(config_path="", log_path="",
 * `setup_logging` now return a `LogConfig` object. 
    You can set/change parameters of this object instead of passing arguments directly to `setup_logging`.<br>
    Only `use_multiprocessing` argument must be set with `setup_logging`.
-* `full_context` is now an `int` that indicate the depth level from the bottom,
-   where surrounding variables should be parsed. 
-* Turned off parsing full context for `raise` exception since many exception names are enough to understand the problem. 
+
+__Behaviors changed__:
+
+  * `full_context` is now an `int` that indicate the depth level from the bottom,
+       where surrounding variables should be parsed. 
+  * Turned off parsing full context for `raise` exception since many exception names are enough to understand the problem.
+  * `log_config` file: move `suppress` section into `logger_tt` section. 
+    Future settings will also be put into this section for the sake of managing. 
+    If you need to hanging the logging framework, you just need to delete this section and move on. 
 
 ## 1.4.2
 To prevent exception during logging, the following actions have been applied:

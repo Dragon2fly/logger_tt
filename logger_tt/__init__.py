@@ -104,6 +104,7 @@ def setup_logging(config_path="", log_path="",
 
     if current_process().name == 'MainProcess':
         logging.debug('New log started'.center(50, '_'))
+        logging.debug(f'Log config file: {config_path}')
 
     # set logging mode accordingly
     internal_config.set_mode(use_multiprocessing)

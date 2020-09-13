@@ -14,7 +14,8 @@ setup(
     platforms=["Any platform -- don't need Windows"],
     author='Nguyen Ba Duc Tin',
     author_email='nguyenbaduc.tin@gmail.com',
-    description='Make logging simple, log even exception that you forgot to catch. Multiprocessing logging is a breeze',
+    description='Make logging simple, log even exception that you forgot to catch. '
+                'Even multiprocessing logging becomes a breeze',
     long_description=long_description,
     long_description_content_type='text/markdown',
     classifiers=[
@@ -26,6 +27,8 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Operating System :: OS Independent',
+        'Topic :: System :: Hardware :: Symmetric Multi-processing',
+        'Topic :: System :: Logging',
         'Topic :: Software Development :: Debuggers',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],

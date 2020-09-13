@@ -1,5 +1,5 @@
 # Logger_tt
-Make configuring logging simpler and log even exceptions that you forgot to catch. 
+Make configuring logging simpler and log even exceptions that you forgot to catch. <br>
 Even multiprocessing logging becomes a breeze.
 
 ## Install
@@ -371,15 +371,18 @@ setup_logging(config_path="", log_path="",
 
 7. Logging in multiprocessing:
     
-    This is archived by using multiprocessing queues or a socket server. 
+    This is archived by using multiprocessing queues or a socket server.
+    
     For linux, copy-on-write while forking carries over logger's information. 
     So `multiprocess.Queue` is enough in this case. 
     
     For Windows, it is important that `setup_logging()` must be call out side of `if __name__ == '__main__':` guard block.
     Because child processes run from scratch and re-import `__main__`, by re-executing `setup_logging()`, 
     logger `SocketHandler` can be setup automatically. 
+    
     This also means that the same config can work with both `multiprocessing.Process` and `multiprocessing.Pool` 
     magically without user doing anything special.
+    
     Below is a minimal example:
     
     ```python
@@ -531,12 +534,13 @@ setup_logging(config_path="", log_path="",
 
 # changelog
 ## 1.5.0
-* Logging is off-load to another thread and uses Queue to communicate. 
-  It allow critical thread can do there job why time-consuming logging can be done later or in parallel. 
-* Support multiprocessing logging. For linux, a multiprocessing queue is used. 
+* Logging is off-loaded to another thread and uses Queue to communicate. 
+  This allow critical thread can do there job why time-consuming logging can be done later or in parallel. 
+* Support for multiprocessing logging. For linux, a multiprocessing queue is used. 
   For Windows and macOS, a socket server is used instead.  
 * `setup_logging` now return a `LogConfig` object. 
-   You can set/change parameters of this object instead of passing arguments directly to `setup_logging`.
+   You can set/change parameters of this object instead of passing arguments directly to `setup_logging`.<br>
+   Only `use_multiprocessing` argument must be set with `setup_logging`.
 * `full_context` is now an `int` that indicate the depth level from the bottom,
    where surrounding variables should be parsed. 
 * Turned off parsing full context for `raise` exception since many exception names are enough to understand the problem. 

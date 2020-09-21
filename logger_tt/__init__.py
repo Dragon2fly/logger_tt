@@ -78,15 +78,15 @@ def setup_logging(config_path="", log_path="",
             This option can only be used here.
     """
     if config_path:
-        path = Path(config_path)
-        assert path.is_file(), 'Input config path is not a file!'
-        assert path.suffix in ['.yaml', '.json'], 'Config file type must be either yaml or json!'
-        assert path.exists(), f'Config file path not exists! {path.absolute()}'
+        cfgpath = Path(config_path)
+        assert cfgpath.is_file(), 'Input config path is not a file!'
+        assert cfgpath.suffix in ['.yaml', '.json'], 'Config file type must be either yaml or json!'
+        assert cfgpath.exists(), f'Config file path not exists! {cfgpath.absolute()}'
     else:
-        path = Path(__file__).parent / 'log_config.json'
+        cfgpath = Path(__file__).parent / 'log_config.json'
 
     # load config from file
-    config = load_from_file(path)
+    config = load_from_file(cfgpath)
     ensure_path(config, log_path)
     logger_tt_config = config.pop('logger_tt', {})
 
@@ -105,7 +105,7 @@ def setup_logging(config_path="", log_path="",
 
     if current_process().name == 'MainProcess':
         logging.debug('New log started'.center(50, '_'))
-        logging.debug(f'Log config file: {config_path}')
+        logging.debug(f'Log config file: {cfgpath}')
 
     # set logging mode accordingly
     internal_config.set_mode(use_multiprocessing)

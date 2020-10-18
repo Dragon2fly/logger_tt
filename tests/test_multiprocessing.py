@@ -31,7 +31,6 @@ def test_multiprocessing_error(value):
 
 
 def test_multiprocessing_pool():
-    setup_logging(use_multiprocessing=True)
     cmd = ["python", "multiprocessing_pool.py", "10"]
     run(cmd)
 

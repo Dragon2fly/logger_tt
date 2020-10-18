@@ -1,3 +1,4 @@
+import pytest
 from subprocess import run
 from logging import getLogger
 from pathlib import Path
@@ -11,15 +12,22 @@ log = Path.cwd() / 'logs/log.txt'
 
 
 def test_multiprocessing_normal():
-    with setup_logging(use_multiprocessing=True):
-        cmd = ["python", "multiprocessing_normal.py", "3"]
-        run(cmd)
+    cmd = ["python", "multiprocessing_normal.py", "3"]
+    run(cmd)
 
     data = log.read_text(encoding='utf8')
     assert 'Parent process is ready to spawn child' in data
     assert 'child process 0' in data
     assert 'child process 1' in data
     assert 'child process 2' in data
+
+
+@pytest.mark.parametrize('value', [-1, 2, 'forker', 'spawm'])
+def test_multiprocessing_error(value):
+    with pytest.raises(ValueError) as e:
+        setup_logging(use_multiprocessing=value)
+
+    assert f'Expected a bool or a multiprocessing start_method name, but got: {value}' in str(e)
 
 
 def test_multiprocessing_pool():

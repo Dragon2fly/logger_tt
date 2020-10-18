@@ -44,6 +44,8 @@ class LogConfig:
     def set_mode(self, use_multiprocessing):
         """Select logging method according to platform and multiprocessing"""
         os_name = platform.system()
+        if use_multiprocessing not in [True, False, 'fork', 'spawn', 'forkserver']:
+            raise ValueError(f'Expected a bool or a multiprocessing start_method name, but got: {use_multiprocessing}')
 
         if not use_multiprocessing:
             # for normal usage, thread queue is more than enough
@@ -51,7 +53,7 @@ class LogConfig:
             self.replace_with_queue_handler()
         else:
             # multiprocessing
-            if os_name == 'Linux':
+            if os_name == 'Linux' and use_multiprocessing == 'fork':
                 # because of copy on write while forking, multiprocessing queue can be used
                 self.qclass = mpQueue
                 self.replace_with_queue_handler()
@@ -61,7 +63,7 @@ class LogConfig:
                 self.replace_with_socket_handler()
 
     def replace_with_queue_handler(self):
-        """ call this method after setting up dictConfig """
+        """ setup a central queue handler and start a listener thread """
         all_loggers = [root_logger] + [logging.getLogger(name) for name in root_logger.manager.loggerDict]
 
         for logger in all_loggers:
@@ -83,12 +85,10 @@ class LogConfig:
             # start listening
             atexit.register(ql.stop)
             ql.start()
-
-    def clean_up(self, sh):
-        # print('close it'.center(40, '-'))
-        sh.close()
+            root_logger.debug('Logging queue listener started!')
 
     def replace_with_socket_handler(self):
+        """ setup a central socket handler and start a listener server """
         logger = logging.getLogger()
 
         # backup current handlers
@@ -99,7 +99,7 @@ class LogConfig:
 
         # add socket handler
         socket_handler = logging.handlers.SocketHandler(self.host, self.port)
-        atexit.register(self.clean_up, socket_handler)
+        atexit.register(socket_handler.close)
         logger.addHandler(socket_handler)
 
         # initiate server
@@ -107,7 +107,7 @@ class LogConfig:
             self.tcp_server = LogRecordSocketReceiver(self.host, self.port, all_handlers)
             serving = Thread(target=self.tcp_server.serve_until_stopped)
             serving.start()
-            root_logger.debug('Start logging server ...')
+            root_logger.debug('Logging server started!')
 
     def suppress_logger(self, loggers):
         if not loggers:

@@ -80,6 +80,10 @@ setup_logging(config_path="", log_path="",
               use_multiprocessing=False)
 ```
 
+This function also return a `LogConfig` object. 
+Except `config_path`, `log_path` and `use_multiprocessing`, 
+other parameters are attributes of this object and can be changed on the fly.
+
 
 1. You can overwrite the default log path with your own as follows:
     
@@ -399,7 +403,7 @@ setup_logging(config_path="", log_path="",
     
     def worker(arg):
         logger.info(f'child process {arg}: started')
-        time.sleep(randint(1,10))   # imitate time consuming process
+        time.sleep(randint(1,10))                  # imitate time consuming process
         logger.info(f'child process {arg}: stopped')
     
     
@@ -430,6 +434,27 @@ setup_logging(config_path="", log_path="",
     [2020-09-11 00:06:17] [__mp_main__ INFO] child process 0: stopped
     ```
 
+   **Note**: Under linux, to use `queueHandler`, you must pass `use_multiprocessing="fork"` to `setup_logging`.<br>
+   Other options `True`, `spawn`, `forkserver` will use `socketHandler` by default.<br> 
+   This is to prevent you `set_start_method` as `spawn` under linux and thus `queueHandler` won't work.
+   
+8. Temporary disable logging:
+
+    Some block of code contain critical information, such as password processing, that should not be logged.
+    You can disable logging for that block with a `logging_disabled` context:
+  
+    ```python
+    from logger_tt import logging_disabled, getLogger
+    
+    logger = getLogger(__name__) 
+   
+    
+    logger.debug('Begin a secret process')
+    with logging_disabled():
+        logger.info('This will not appear in any log')
+    
+    logger.debug('Finish')
+    ```
 
 # Sample config:
 
@@ -536,6 +561,14 @@ setup_logging(config_path="", log_path="",
    ```
 
 # changelog
+## 1.5.1
+* Use `socketHandler` as default for multiprocessing.
+ Under linux, to use `queueHandler`, user must pass `use_multiprocessing="fork"` to `setup_logging` 
+* Expose `logging_disabled` function to user: `from logger_tt import logging_disabled`. 
+Then this function can be used as a context with `with` statement. 
+* For convenient, user can import `getLogger` function from `logger_tt`, too.
+
+
 ## 1.5.0
 * Logging is off-loaded to another thread and uses Queue to communicate. 
   This allow critical thread can do there job why time-consuming logging can be done later or in parallel. 
@@ -543,7 +576,7 @@ setup_logging(config_path="", log_path="",
   For Windows and macOS, a socket server is used instead.  
 * `setup_logging` now return a `LogConfig` object. 
    You can set/change parameters of this object instead of passing arguments directly to `setup_logging`.<br>
-   Only `use_multiprocessing` argument must be set with `setup_logging`.
+   Only `config_path`, `log_path` and `use_multiprocessing` argument must be set with `setup_logging`.
 
 __Behaviors changed__:
 

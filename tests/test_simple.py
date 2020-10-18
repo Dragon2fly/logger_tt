@@ -5,7 +5,7 @@ from logging import getLogger
 from pathlib import Path
 
 import pytest
-from logger_tt import setup_logging
+from logger_tt import setup_logging, logging_disabled
 
 __author__ = "Duc Tin"
 
@@ -103,3 +103,31 @@ def test_suppress_logger(capsys, level):
 
     assert 'ERROR' in stdout_data
     assert 'CRITICAL' in stdout_data
+
+
+def test_logging_disabled(capsys):
+    with setup_logging():
+        logger.info('Secret process starts')
+        with logging_disabled():
+            logger.debug('debug')
+            logger.info('info')
+            logger.warning('warning')
+            logger.error('error')
+            logger.critical('critical')
+        logger.info('Secret process finished')
+
+    stdout_data = capsys.readouterr().out
+    assert 'debug' not in stdout_data
+    assert 'info' not in stdout_data
+    assert 'warning' not in stdout_data
+    assert 'error' not in stdout_data
+    assert 'critical' not in stdout_data
+
+    log_data = log.read_text()
+    assert 'debug' not in log_data
+    assert 'info' not in log_data
+    assert 'warning' not in log_data
+    assert 'error' not in log_data
+    assert 'critical' not in log_data
+
+

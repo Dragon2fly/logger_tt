@@ -3,12 +3,13 @@ import logging
 import json
 from pathlib import Path
 from logging.config import dictConfig
-from .inspector import analyze_frame
+from logging import getLogger
+from .inspector import analyze_frame, logging_disabled
 from .core import LogConfig
 from multiprocessing import current_process
 
 __author__ = "Duc Tin"
-__all__ = ['setup_logging']
+__all__ = ['setup_logging', 'logging_disabled', 'getLogger']
 
 
 """Config log from file and make it also logs uncaught exception"""

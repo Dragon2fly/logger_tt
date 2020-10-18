@@ -8,7 +8,6 @@ from io import StringIO
 from contextlib import contextmanager
 from traceback import StackSummary, walk_tb
 
-
 ID_PATTERN = re.compile(r'([a-zA-Z_][a-zA-Z_0-9.]*)')
 MEM_PATTERN = re.compile(r'<.*object at 0x[0-9A-Fa-f]+>')
 
@@ -40,7 +39,7 @@ def get_recur_attr(obj, attr: str):
         return get_recur_attr(obj, next_levels[0])
 
 
-def get_repr(obj, multiline_indent:int=0) -> str:
+def get_repr(obj, multiline_indent: int = 0) -> str:
     """
     Pick a more useful representation of object `obj` between __str__ and __repr__
      if it available.
@@ -67,7 +66,7 @@ def get_repr(obj, multiline_indent:int=0) -> str:
         return _repr_
 
 
-def is_full_statement(*lines:str) -> bool:
+def is_full_statement(*lines: str) -> bool:
     """
     Check if a set of lines makes up a full python statement
     :param lines: list of line of python code
@@ -87,7 +86,7 @@ def is_full_statement(*lines:str) -> bool:
         return True
 
 
-def get_full_statement(filename, lineno:int) -> list:
+def get_full_statement(filename, lineno: int) -> list:
     """
     Get all lines of python file `filename` that makes up a full statement starting from `lineno`
     :param filename: path to python source code file
@@ -106,7 +105,7 @@ def get_full_statement(filename, lineno:int) -> list:
 
         lineno += 1
 
-    lines[-1] = lines[-1].strip('\n')   # remove newline in last line
+    lines[-1] = lines[-1].strip('\n')  # remove newline in last line
     indent = re.search(r'^(\s+)', lines[0])
     if indent:
         indent = indent.group(1)
@@ -132,7 +131,7 @@ def get_traceback_depth(trace_back) -> int:
     return count
 
 
-def analyze_frame(trace_back, full_context:int=False) -> str:
+def analyze_frame(trace_back, full_context: int = False) -> str:
     """
     Read out variables' content surrounding the error line of code
     :param trace_back: A traceback object when exception occur
@@ -168,8 +167,8 @@ def analyze_frame(trace_back, full_context:int=False) -> str:
                    f'    {line}']
 
             # todo: dump all level to different file?
-            parse_level = max(full_context-1, 0)
-            if idx+1 < (stack_depth-parse_level):
+            parse_level = max(full_context - 1, 0)
+            if idx + 1 < (stack_depth - parse_level):
                 # don't parse variables for top levels
                 txt.append('')
                 result.append('\n'.join(txt))
@@ -178,7 +177,7 @@ def analyze_frame(trace_back, full_context:int=False) -> str:
             # get value of variables on the error line
             identifiers = ID_PATTERN.findall(line)
             seen = set()
-            outer = "(outer) " if idx else ""       # ground level variables are not outer for sure
+            outer = "(outer) " if idx else ""  # ground level variables are not outer for sure
             for i in identifiers:
                 if i in seen or i.endswith('.'):
                     continue
@@ -217,5 +216,3 @@ def analyze_frame(trace_back, full_context:int=False) -> str:
             result.append('\n'.join(txt))
 
     return '\n'.join(result)
-
-

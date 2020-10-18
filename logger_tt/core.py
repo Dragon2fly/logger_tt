@@ -85,7 +85,8 @@ class LogConfig:
             # start listening
             atexit.register(ql.stop)
             ql.start()
-            root_logger.debug('Logging queue listener started!')
+
+        root_logger.debug('Logging queue listener started!')
 
     def replace_with_socket_handler(self):
         """ setup a central socket handler and start a listener server """

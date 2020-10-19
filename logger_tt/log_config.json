@@ -3,11 +3,15 @@
   "disable_existing_loggers": false,
   "formatters": {
     "simple": {
-      "format": "[%(asctime)s] [%(name)s %(levelname)s] %(message)s",
+      "format": "[%(asctime)s] [%(name)s:%(lineno)d %(levelname)s] %(message)s",
       "datefmt": "%Y-%m-%d %H:%M:%S"
     },
     "brief": {
       "format": "[%(asctime)s] %(levelname)s: %(message)s",
+      "datefmt": "%Y-%m-%d %H:%M:%S"
+    },
+    "multiprocessing": {
+      "format": "[%(asctime)s] [%(processName)s:%(name)s:%(lineno)d %(levelname)s] %(message)s",
       "datefmt": "%Y-%m-%d %H:%M:%S"
     }
   },

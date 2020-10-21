@@ -5,7 +5,8 @@ from logging import getLogger
 from pathlib import Path
 
 import pytest
-from logger_tt import setup_logging, logging_disabled
+from logger_tt import setup_logging, logging_disabled, logger as my_logger
+
 
 __author__ = "Duc Tin"
 
@@ -131,3 +132,24 @@ def test_logging_disabled(capsys):
     assert 'critical' not in log_data
 
 
+def test_default_logger(capsys):
+    with setup_logging():
+        my_logger.debug('debug')
+        my_logger.info('info')
+        my_logger.warning('warning')
+        my_logger.error('error')
+        my_logger.critical('critical')
+
+    stdout_data = capsys.readouterr().out
+    assert 'debug' not in stdout_data
+    assert 'info' in stdout_data
+    assert 'warning' in stdout_data
+    assert 'error' in stdout_data
+    assert 'critical' in stdout_data
+
+    log_data = log.read_text()
+    assert re.search(r'test_simple\.py:\d+.+debug', log_data)
+    assert re.search(r'test_simple\.py:\d+.+info', log_data)
+    assert re.search(r'test_simple\.py:\d+.+warning', log_data)
+    assert re.search(r'test_simple\.py:\d+.+error', log_data)
+    assert re.search(r'test_simple\.py:\d+.+critical', log_data)

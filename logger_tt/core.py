@@ -1,5 +1,6 @@
 import socket
 import sys
+import re
 import logging
 import atexit
 import platform
@@ -14,7 +15,6 @@ import struct
 import select
 
 from .capture import PrintCapture
-
 
 __author__ = "Duc Tin"
 root_logger = logging.getLogger()
@@ -79,7 +79,7 @@ class LogConfig:
             q_handler = handlers.QueueHandler(queue)
             logger.addHandler(q_handler)
 
-            ql = handlers.QueueListener(queue,*all_handlers, respect_handler_level=True)
+            ql = handlers.QueueListener(queue, *all_handlers, respect_handler_level=True)
             self.q_listeners.append(ql)
 
             # start listening
@@ -218,9 +218,10 @@ class LogRecordSocketReceiver(socketserver.ThreadingTCPServer):
     """
 
     allow_reuse_address = True
-    daemon_threads = False         # Set this to True to immediate exit when main-thread exits.
-                                   # There is a chance that it terminates some log records that are
-                                   # being processed
+    daemon_threads = False  # Set this to True to immediate exit when main-thread exits.
+
+    # There is a chance that it terminates some log records that are
+    # being processed
 
     def __init__(self, host, port, log_record_handlers):
         LogRecordStreamHandler.handlers = log_record_handlers
@@ -235,3 +236,44 @@ class LogRecordSocketReceiver(socketserver.ThreadingTCPServer):
                                        self.timeout)
             if rd:
                 self.handle_request()
+
+
+class DefaultFormatter(logging.Formatter):
+    def __init__(self, fmt: str = '', datefmt: str = '', style: str = ''):
+        super(DefaultFormatter, self).__init__(fmt=fmt, datefmt=datefmt)
+
+        standardized_fmt = self._standardize(fmt)
+        self._logger_tt_formatter = logging.Formatter(fmt=standardized_fmt, datefmt=datefmt, style=style)
+
+    @staticmethod
+    def _standardize(fmt):
+        if re.search(r'%\(filename\)s.*%\(lineno\)d', fmt):
+            return fmt
+        else:
+            standardized_fmt = fmt.replace('%(filename)s', '')
+            standardized_fmt = re.sub(r'[:-]\s*%\(lineno\)d', r'', standardized_fmt)
+            standardized_fmt = standardized_fmt.replace('%(name)s', '%(filename)s:%(lineno)d')
+            return standardized_fmt
+
+    def format(self, record):
+        if record.name == 'logger_tt':
+            return self._logger_tt_formatter.format(record)
+
+        return super(DefaultFormatter, self).format(record)
+
+
+# setup a default logger for convenient
+# logger = logging.getLogger('logger_tt')
+# logger.propagate = False
+# logger.level = logging.DEBUG
+#
+# stream_handler = logging.StreamHandler(stream=sys.stdout)
+# stream_handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S"))
+#
+# file_handler = handlers.TimedRotatingFileHandler(filename="logs/log.txt", backupCount=15,
+#                                                  encoding='utf8', when='midnight', delay=True)
+# file_handler.setFormatter(logging.Formatter('[%(asctime)s] [%(filename)s:%(lineno)d %(levelname)s] %(message)s',
+#                                             datefmt="%Y-%m-%d %H:%M:%S"))
+#
+# logger.addHandler(stream_handler)
+# logger.addHandler(file_handler)

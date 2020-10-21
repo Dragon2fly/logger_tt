@@ -9,12 +9,14 @@ from .core import LogConfig
 from multiprocessing import current_process
 
 __author__ = "Duc Tin"
-__all__ = ['setup_logging', 'logging_disabled', 'getLogger']
+__all__ = ['setup_logging', 'logging_disabled', 'getLogger', 'logger']
 
 
 """Config log from file and make it also logs uncaught exception"""
 
 internal_config = LogConfig()
+logger = getLogger('logger_tt')         # pre-made default logger for all modules
+logger.setLevel(logging.DEBUG)
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -52,10 +54,17 @@ def ensure_path(config: dict, override_log_path: str = ""):
 def load_from_file(f: Path) -> dict:
     if f.suffix == '.yaml':
         import yaml     # will raise error if pyyaml is not installed
-        return yaml.safe_load(f.read_text())
+        dict_cfg = yaml.safe_load(f.read_text())
     else:
         with f.open() as fp:
-            return json.load(fp)
+            dict_cfg = json.load(fp)
+
+    # add default formatter to use logger_tt logger right on spot
+    for formatter in dict_cfg['formatters'].values():
+        if not formatter.get('class'):
+            formatter['class'] = 'logger_tt.core.DefaultFormatter'
+
+    return dict_cfg
 
 
 def setup_logging(config_path="", log_path="",

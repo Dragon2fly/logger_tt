@@ -260,20 +260,3 @@ class DefaultFormatter(logging.Formatter):
             return self._logger_tt_formatter.format(record)
 
         return super(DefaultFormatter, self).format(record)
-
-
-# setup a default logger for convenient
-# logger = logging.getLogger('logger_tt')
-# logger.propagate = False
-# logger.level = logging.DEBUG
-#
-# stream_handler = logging.StreamHandler(stream=sys.stdout)
-# stream_handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S"))
-#
-# file_handler = handlers.TimedRotatingFileHandler(filename="logs/log.txt", backupCount=15,
-#                                                  encoding='utf8', when='midnight', delay=True)
-# file_handler.setFormatter(logging.Formatter('[%(asctime)s] [%(filename)s:%(lineno)d %(levelname)s] %(message)s',
-#                                             datefmt="%Y-%m-%d %H:%M:%S"))
-#
-# logger.addHandler(stream_handler)
-# logger.addHandler(file_handler)

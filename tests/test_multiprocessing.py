@@ -1,5 +1,7 @@
+import re
+
 import pytest
-from subprocess import run
+from subprocess import run, PIPE
 from logging import getLogger
 from pathlib import Path
 
@@ -46,3 +48,17 @@ def test_multiprocessing_pool():
     assert 'child process 7' in data
     assert 'child process 8' in data
     assert 'child process 9' in data
+
+
+def test_multiprocessing_threading():
+    """Test a default logger"""
+    cmd = ["python", "multiprocessing_threading.py", "10"]
+    result = run(cmd, stdout=PIPE, universal_newlines=True)
+    assert 'Parent process is ready to spawn child' in result.stdout
+    expect = re.findall(r'Process-\d+ Thread-\d+.*? thread running from process', result.stdout)
+    assert len(expect) == 10
+
+    data = log.read_text(encoding='utf8')
+    assert 'Parent process is ready to spawn child' in data
+    expect = re.findall(r'Process-\d+ Thread-\d+.*? thread running from process', data)
+    assert len(expect) == 10

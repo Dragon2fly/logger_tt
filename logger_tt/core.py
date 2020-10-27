@@ -242,21 +242,45 @@ class DefaultFormatter(logging.Formatter):
     def __init__(self, fmt: str = '', datefmt: str = '', style: str = ''):
         super(DefaultFormatter, self).__init__(fmt=fmt, datefmt=datefmt)
 
-        standardized_fmt = self._standardize(fmt)
-        self._logger_tt_formatter = logging.Formatter(fmt=standardized_fmt, datefmt=datefmt, style=style)
+        self._logger_tt_formatters = {}
+        for case, fmt in self._standardize(fmt).items():
+            self._logger_tt_formatters[case] = logging.Formatter(fmt=fmt, datefmt=datefmt, style=style)
 
     @staticmethod
     def _standardize(fmt):
+        formatters = {}
+
+        # normal format
         if re.search(r'%\(filename\)s.*%\(lineno\)d', fmt):
-            return fmt
+            standardized_fmt = fmt
         else:
             standardized_fmt = fmt.replace('%(filename)s', '')
             standardized_fmt = re.sub(r'[:-]\s*%\(lineno\)d', r'', standardized_fmt)
             standardized_fmt = standardized_fmt.replace('%(name)s', '%(filename)s:%(lineno)d')
-            return standardized_fmt
+
+        # concurrent format
+        concurrent_fmt = standardized_fmt.replace('%(threadName)s', '').replace('%(processName)s', '')
+        thread_fmt = concurrent_fmt.replace('%(asctime)s', '%(asctime)s | %(threadName)s')
+        mp_fmt = concurrent_fmt.replace('%(asctime)s', '%(asctime)s | %(processName)s')
+        mp_thread_fmt = concurrent_fmt.replace('%(asctime)s', '%(asctime)s | %(processName)s %(threadName)s')
+
+        # stored format strings by cases
+        formatters['normal'] = standardized_fmt
+        formatters['thread'] = thread_fmt
+        formatters['multiprocess'] = mp_fmt
+        formatters['both'] = mp_thread_fmt
+
+        return formatters
 
     def format(self, record):
         if record.name == 'logger_tt':
-            return self._logger_tt_formatter.format(record)
+            if record.processName == 'MainProcess' and record.threadName == 'MainThread':
+                return self._logger_tt_formatters['normal'].format(record)
+            elif record.processName == 'MainProcess' and record.threadName != 'MainThread':
+                return self._logger_tt_formatters['thread'].format(record)
+            elif record.processName != 'MainProcess' and record.threadName == 'MainThread':
+                return self._logger_tt_formatters['multiprocess'].format(record)
+            else:
+                return self._logger_tt_formatters['both'].format(record)
 
         return super(DefaultFormatter, self).format(record)

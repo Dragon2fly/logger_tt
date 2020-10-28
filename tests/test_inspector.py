@@ -1,4 +1,5 @@
 import re
+import sys
 from pathlib import Path
 from subprocess import run, PIPE
 
@@ -67,7 +68,7 @@ def test_is_full_statement():
 
 
 def test_1_scope():
-    cmd = ["python", "exception_main.py"]
+    cmd = [sys.executable, "exception_main.py"]
     run(cmd)
 
     data = log.read_text()
@@ -76,7 +77,7 @@ def test_1_scope():
 
 
 def test_nested_1():
-    cmd = ["python", "exception_nested_1.py"]
+    cmd = [sys.executable, "exception_nested_1.py"]
     run(cmd)
 
     data = log.read_text(encoding='utf8')
@@ -87,7 +88,7 @@ def test_nested_1():
 
 
 def test_nested_2():
-    cmd = ["python", "exception_nested_2.py"]
+    cmd = [sys.executable, "exception_nested_2.py"]
     run(cmd)
 
     data = log.read_text(encoding='utf8')
@@ -97,7 +98,7 @@ def test_nested_2():
 
 
 def test_full_context_level1():
-    cmd = ["python", "exception_full_context.py", "1"]
+    cmd = [sys.executable, "exception_full_context.py", "1"]
     run(cmd)
 
     data = log.read_text(encoding='utf8')
@@ -108,7 +109,7 @@ def test_full_context_level1():
 
 
 def test_full_context_level2():
-    cmd = ["python", "exception_full_context.py", "2"]
+    cmd = [sys.executable, "exception_full_context.py", "2"]
     run(cmd)
 
     data = log.read_text(encoding='utf8')
@@ -119,7 +120,7 @@ def test_full_context_level2():
 
 
 def test_full_context_level3():
-    cmd = ["python", "exception_full_context.py", "3"]
+    cmd = [sys.executable, "exception_full_context.py", "3"]
     run(cmd)
 
     data = log.read_text(encoding='utf8')
@@ -130,7 +131,7 @@ def test_full_context_level3():
 
 
 def test_log_exception():
-    cmd = ["python", "exception_log.py"]
+    cmd = [sys.executable, "exception_log.py"]
     run(cmd)
 
     data = log.read_text(encoding='utf8')
@@ -139,7 +140,7 @@ def test_log_exception():
 
 
 def test_multiline():
-    cmd = ["python", "exception_multiline.py"]
+    cmd = [sys.executable, "exception_multiline.py"]
     run(cmd)
 
     data = log.read_text(encoding='utf8')
@@ -149,7 +150,7 @@ def test_multiline():
 
 
 def test_multiline2():
-    cmd = ["python", "exception_multiline2.py"]
+    cmd = [sys.executable, "exception_multiline2.py"]
     run(cmd)
 
     data = log.read_text(encoding='utf8')
@@ -162,7 +163,7 @@ def test_multiline2():
 
 
 def test_deadlock():
-    cmd = ["python", "exception_deadlock.py"]
+    cmd = [sys.executable, "exception_deadlock.py"]
     run(cmd)
 
     data = log.read_text(encoding='utf8')
@@ -172,7 +173,7 @@ def test_deadlock():
 
 
 def test_del_logging():
-    cmd = ["python", "exception_del_logging.py"]
+    cmd = [sys.executable, "exception_del_logging.py"]
     output = run(cmd, stderr=PIPE, universal_newlines=True)
     assert "Logging error" not in output.stderr
 

@@ -1,4 +1,5 @@
 import re
+import sys
 
 import pytest
 from subprocess import run, PIPE
@@ -14,7 +15,7 @@ log = Path.cwd() / 'logs/log.txt'
 
 
 def test_multiprocessing_normal():
-    cmd = ["python", "multiprocessing_normal.py", "3"]
+    cmd = [sys.executable, "multiprocessing_normal.py", "3"]
     run(cmd)
 
     data = log.read_text(encoding='utf8')
@@ -33,7 +34,7 @@ def test_multiprocessing_error(value):
 
 
 def test_multiprocessing_pool():
-    cmd = ["python", "multiprocessing_pool.py", "10"]
+    cmd = [sys.executable, "multiprocessing_pool.py", "10"]
     run(cmd)
 
     data = log.read_text(encoding='utf8')
@@ -52,7 +53,7 @@ def test_multiprocessing_pool():
 
 def test_multiprocessing_threading():
     """Test a default logger"""
-    cmd = ["python", "multiprocessing_threading.py", "10"]
+    cmd = [sys.executable, "multiprocessing_threading.py", "10"]
     result = run(cmd, stdout=PIPE, universal_newlines=True)
     assert 'Parent process is ready to spawn child' in result.stdout
     expect = re.findall(r'Process-\d+ Thread-\d+.*? thread running from process', result.stdout)

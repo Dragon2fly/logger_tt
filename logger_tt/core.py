@@ -41,6 +41,26 @@ class LogConfig:
 
         self.original_stdout = sys.stdout
 
+    def from_dict(self, odict:dict):
+        # store basic settings
+        for key in ['full_context', 'strict', 'guess_level']:
+            setattr(self, key, odict[key])
+
+        # set capture_print
+        self.capture_print = odict['capture_print']
+
+        # suppress other logger
+        level = odict.get('suppress_level_below', 'WARNING')
+        if type(level) is str:
+            if level.upper() not in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
+                raise ValueError(f'"level" string is incorrect: {level}')
+            level = getattr(logging, level.upper())
+        self.suppress_level_below = level
+        self.suppress_logger(odict.get("suppress"))
+
+        # set logging mode accordingly
+        self.set_mode(odict['use_multiprocessing'])
+
     def set_mode(self, use_multiprocessing):
         """Select logging method according to platform and multiprocessing"""
         os_name = platform.system()

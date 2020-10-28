@@ -45,6 +45,12 @@
   },
 
   "logger_tt": {
-    "suppress": ["exchangelib"]
+    "suppress": ["exchangelib"],
+    "suppress_level_below": "WARNING",
+    "capture_print": false,
+    "strict": false,
+    "guess_level": false,
+    "full_context": 0,
+    "use_multiprocessing": false
   }
 }

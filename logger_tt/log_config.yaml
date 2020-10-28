@@ -38,4 +38,10 @@ root:
   handlers: [console, error_file_handler]
 
 logger_tt:
-  suppress: [exchangelib]
+  suppress: ["exchangelib"]
+  suppress_level_below: "WARNING"
+  capture_print: False
+  strict: False
+  guess_level: False
+  full_context: 0
+  use_multiprocessing: False

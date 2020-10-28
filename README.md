@@ -17,30 +17,56 @@ setup_logging(full_context=1)
 ```
 
 Then from any of your modules, you just need to get a `logger` and start logging.
+There are two ways that you could obtain a logger.
 
-```python
-from logging import getLogger
+* **Conventional way**:
 
-logger = getLogger(__name__)
+  ```python
+  from logging import getLogger
+  
+  logger = getLogger(__name__)
+  
+  logger.debug('Module is initialized')
+  logger.info('Making connection ...')
+  ```
+  
+  ```
+  [2020-07-21 11:21:07] [__main__:7 DEBUG] Module is initialized
+  [2020-07-21 11:21:07] [__main__:8 INFO] Making connection ...
+  ```
 
-logger.debug('Module is initialized')
-logger.info('Making connection ...')
-```
+* **Convenient way**:
 
+  ```python
+  from logger_tt import logger
+  
+  logger.debug('Module is initialized')
+  logger.info('Making connection ...')
+  ```
+  
+  ```
+  [2020-07-21 11:24:19] [my_module.py:5 DEBUG] Module is initialized
+  [2020-07-21 11:24:19] [my_module.py:6 INFO] Making connection ...
+  ```
+  
+  This uses a pre-made logger whose name is `logger_tt`.
+  The log line written out by this logger will have python filename instead of the logger name.
+  Also, this logger will automatically inject process's name and thread's name in case of logging from concurrent code.
 
-This will provide your project with the following **default** log behavior:
+Both ways will provide your project with the following **default** log behavior:
 
-* log file: Assume that your `working directory` is `project_root`,
- log.txt is stored at your `project_root/logs/` folder. 
-If the log path doesn't exist, it will be created. 
+* **log file**: Assume that your `working directory` is `project_root`,
+ log.txt is stored at your `project_root/logs/` folder. <br>
+If the log path doesn't exist, it will be created. <br>
 The log file is time rotated at midnight. A maximum of 15 dates of logs will be kept.
 This log file's `level` is `DEBUG`.<br>
-The log format is `[%(asctime)s] [%(name)s %(levelname)s] %(message)s` where time is `%Y-%m-%d %H:%M:%S`.<br>
-Example: `[2020-05-09 00:31:33] [myproject.mymodule DEBUG] Module is initialized`
+The log format is `[%(asctime)s] [%(name)s:%(lineno)d %(levelname)s] %(message)s`, <br> 
+where the time format is `%Y-%m-%d %H:%M:%S`.<br>
+*Example*: `[2020-05-09 00:31:33] [myproject.mymodule:26 DEBUG] Module is initialized`
 
-* console: log with level `INFO` and above will be printed to `stdout` of the console. <br>
+* **console**: log records with level `INFO` and above will be printed to `stdout` of the console. <br>
 The format for console log is simpler: `[%(asctime)s] %(levelname)s: %(message)s`. <br>
-Example: `[2020-05-09 00:31:34] INFO: Making connection ...`
+*Example*: `[2020-05-09 00:31:34] INFO: Making connection ...`
 
 * `urllib3` logger: this ready-made logger is to silent unwanted messages from `requests` library.
 * suppressed logger: `exchangelib`. This sets logging level of `exchangelib` logger to `WARNING`.<br>
@@ -49,21 +75,21 @@ This is another way to silent unwanted messages from other module, read below fo
 * `root` logger: if there is no logger initialized in your module, this logger will be used with the above behaviors.
 This logger is also used to log **uncaught exception** in your project. Example:
 
-```python
-raise RecursionError
-```
-
-```python
-# log.txt
-[2020-05-31 19:16:01] [root ERROR] Uncaught exception
-Traceback (most recent call last):
-  File "D:/MyProject/Echelon/eyes.py", line 13, in <module>
-    raise RecursionError
-    => var_in = Customer(name='John', member_id=123456)
-    => arg = (456, 789)
-    => kwargs = {'my_kw': 'hello', 'another_kw': 'world'}
-RecursionError
-```
+  ```python
+  raise RecursionError
+  ```
+  
+  ```python
+  # log.txt
+  [2020-05-31 19:16:01] [root ERROR] Uncaught exception
+  Traceback (most recent call last):
+    File "D:/MyProject/Echelon/eyes.py", line 13, in <module>
+      raise RecursionError
+      => var_in = Customer(name='John', member_id=123456)
+      => arg = (456, 789)
+      => kwargs = {'my_kw': 'hello', 'another_kw': 'world'}
+  RecursionError
+  ```
 
 * context logging: When an exception occur, variables used in the line of error are also logged.<br>
 To log full local variables of current function scope, pass `full_context=1` to `setup_logging`.<br>
@@ -83,6 +109,11 @@ setup_logging(config_path="", log_path="",
 This function also return a `LogConfig` object. 
 Except `config_path`, `log_path` and `use_multiprocessing`, 
 other parameters are attributes of this object and can be changed on the fly.
+
+Except `config_path`, `log_path`, all other parameters can be defined in `logger_tt` section in the config file
+(see `Sample config` chapter below). 
+Parameter with the same name passed in `setup_logging` function will override the one in the config file. 
+
 
 
 1. You can overwrite the default log path with your own as follows:
@@ -394,10 +425,9 @@ other parameters are attributes of this object and can be changed on the fly.
     from random import randint
     from multiprocessing import Process
    
-    from logger_tt import setup_logging
-    from logging import getLogger
+    from logger_tt import setup_logging, logger
     
-    logger = getLogger(__name__)
+   
     setup_logging(use_multiprocessing=True)        # for Windows, this line must be outside of guard block
     
     
@@ -423,15 +453,16 @@ other parameters are attributes of this object and can be changed on the fly.
     The content of `log.txt` should be similar to below:
     
     ```text
-    [2020-09-11 00:06:14] [root DEBUG] _________________New log started__________________
-    [2020-09-11 00:06:14] [root DEBUG] Start logging server ...
-    [2020-09-11 00:06:15] [__main__ INFO] Parent process is ready to spawn child
-    [2020-09-11 00:06:16] [__mp_main__ INFO] child process 1: started
-    [2020-09-11 00:06:16] [__mp_main__ INFO] child process 0: started
-    [2020-09-11 00:06:16] [__mp_main__ INFO] child process 2: started
-    [2020-09-11 00:06:17] [__mp_main__ INFO] child process 1: stopped
-    [2020-09-11 00:06:17] [__mp_main__ INFO] child process 2: stopped
-    [2020-09-11 00:06:17] [__mp_main__ INFO] child process 0: stopped
+    [2020-09-11 00:06:14] [root:129 DEBUG] _________________New log started__________________
+    [2020-10-28 20:39:17] [root:130 DEBUG] Log config file: D:\my_project\log_config.json
+    [2020-10-28 20:39:17] [root:131 DEBUG] Logging server started!
+    [2020-10-28 20:39:18] [main.py:19 INFO] Parent process is ready to spawn child
+    [2020-10-28 20:39:19 | Process-2] [tmp.py:12 INFO] child process 1: started
+    [2020-10-28 20:39:19 | Process-1] [tmp.py:12 INFO] child process 0: started
+    [2020-10-28 20:39:19 | Process-3] [tmp.py:12 INFO] child process 2: started
+    [2020-10-28 20:39:25 | Process-1] [tmp.py:14 INFO] child process 0: stopped
+    [2020-10-28 20:39:27 | Process-3] [tmp.py:14 INFO] child process 2: stopped
+    [2020-10-28 20:39:29 | Process-2] [tmp.py:14 INFO] child process 1: stopped
     ```
 
    **Note**: Under linux, to use `queueHandler`, you must pass `use_multiprocessing="fork"` to `setup_logging`.<br>
@@ -462,58 +493,68 @@ other parameters are attributes of this object and can be changed on the fly.
    
    log_config.yaml:
    
-   ```yaml
-   version: 1
-   disable_existing_loggers: False
-   formatters:
-     simple:
-       format: "[%(asctime)s] [%(name)s %(levelname)s] %(message)s"
-       datefmt: "%Y-%m-%d %H:%M:%S"
-     brief: {
-       format: "[%(asctime)s] %(levelname)s: %(message)s"
-       datefmt: "%Y-%m-%d %H:%M:%S"
-   handlers:
-     console:
-       class: logging.StreamHandler
-       level: INFO
-       formatter: simple
-       stream: ext://sys.stdout
-   
-     error_file_handler:
-       class: logging.handlers.TimedRotatingFileHandler
-       level: DEBUG
-       formatter: simple
-       filename: logs/log.txt
-       backupCount: 15
-       encoding: utf8
-       when: midnight
-   
-   loggers:
-     urllib3:
-       level: WARNING
-       handlers: [console, error_file_handler]
-       propagate: no
-   
-   root:
-     level: DEBUG
-     handlers: [console, error_file_handler]
-   
-   logger_tt: 
-     suppress: [exchangelib]
-   ```
+    ```yaml
+    # This is an example of config file
+    # In case of no config provided, log_config.json file will be loaded
+    # If you need a yaml file, install pyyaml package and copy this file
+    version: 1
+    disable_existing_loggers: False
+    formatters:
+      simple:
+        format: "[%(asctime)s] [%(name)s:%(lineno)d %(levelname)s] %(message)s"
+        datefmt: "%Y-%m-%d %H:%M:%S"
+      brief:
+        format: "[%(asctime)s] %(levelname)s: %(message)s"
+        datefmt: "%Y-%m-%d %H:%M:%S"
+    
+    handlers:
+      console:
+        class: logging.StreamHandler
+        level: INFO
+        formatter: simple
+        stream: ext://sys.stdout
+    
+      error_file_handler:
+        class: logging.handlers.TimedRotatingFileHandler
+        level: DEBUG
+        formatter: simple
+        filename: logs/log.txt
+        backupCount: 15
+        encoding: utf8
+        when: midnight
+    
+    loggers:
+      urllib3:
+        level: WARNING
+        handlers: [console, error_file_handler]
+        propagate: no
+    
+    root:
+      level: DEBUG
+      handlers: [console, error_file_handler]
+    
+    logger_tt:
+      suppress: ["exchangelib"]
+      suppress_level_below: "WARNING"
+      capture_print: False
+      strict: False
+      guess_level: False
+      full_context: 0
+      use_multiprocessing: False
+    ```
 
 <br>
 2. Json format:
 
    log_config.json:
-
+   
    ```json
    {
      "version": 1,
      "disable_existing_loggers": false,
      "formatters": {
        "simple": {
-         "format": "[%(asctime)s] [%(name)s %(levelname)s] %(message)s",
+         "format": "[%(asctime)s] [%(name)s:%(lineno)d %(levelname)s] %(message)s",
          "datefmt": "%Y-%m-%d %H:%M:%S"
        },
        "brief": {
@@ -553,10 +594,16 @@ other parameters are attributes of this object and can be changed on the fly.
        "level": "DEBUG",
        "handlers": ["console", "error_file_handler"]
      },
-
+   
      "logger_tt": {
-        "suppress": ["exchangelib"]
-  }
+       "suppress": ["exchangelib"],
+       "suppress_level_below": "WARNING",
+       "capture_print": false,
+       "strict": false,
+       "guess_level": false,
+       "full_context": 0,
+       "use_multiprocessing": false
+     }
    }
    ```
 
@@ -566,8 +613,12 @@ other parameters are attributes of this object and can be changed on the fly.
  Under linux, to use `queueHandler`, user must pass `use_multiprocessing="fork"` to `setup_logging` 
 * Expose `logging_disabled` function to user: `from logger_tt import logging_disabled`. 
 Then this function can be used as a context with `with` statement. 
-* For convenient, user can import `getLogger` function from `logger_tt`, too.
-
+* For convenient, user can import a pre-made `logger` from `logger_tt` to use right away in sub modules.
+The built-in `getLogger` function can be imported from `logger_tt`, too.
+* Added line number to a default `simple` log record formatter in the config file.
+* Most parameters of `setup_logging()` function can be specified in the config file, too.
+If the same parameter is specified in both `setup_logging()` function and in the config file,
+the parameter passed in `setup_logging()` will be used.
 
 ## 1.5.0
 * Logging is off-loaded to another thread and uses Queue to communicate. 

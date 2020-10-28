@@ -26,7 +26,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 
     full_context = internal_config.full_context
 
-    # Root logger with log all other uncaught exceptions
+    # Root logger will log all other uncaught exceptions
     txt = analyze_frame(exc_traceback, full_context)
     logging.error(f"Uncaught exception:\n"
                   f"Traceback (most recent call last):\n"
@@ -52,7 +52,7 @@ def ensure_path(config: dict, override_log_path: str = ""):
 
 
 def load_from_file(f: Path) -> dict:
-    if f.suffix == '.yaml':
+    if f.suffix in ['.yaml', '.yml']:
         import yaml     # will raise error if pyyaml is not installed
         dict_cfg = yaml.safe_load(f.read_text())
     else:
@@ -67,25 +67,47 @@ def load_from_file(f: Path) -> dict:
     return dict_cfg
 
 
-def setup_logging(config_path="", log_path="",
-                  capture_print=False, strict=False, guess_level=False,
-                  full_context=False,
-                  suppress_level_below=logging.WARNING,
-                  use_multiprocessing=False) -> LogConfig:
+def merge_config(from_file:dict, from_func:dict) -> dict:
+    """Override logger_tt config of from_file by
+        the argument passed to the setup_logging function
+    """
+    defaults = dict(capture_print=False, strict=False, guess_level=False,
+                    full_context=0, suppress=None,
+                    suppress_level_below=logging.WARNING, use_multiprocessing=False)
+    merged = {}
+    for key, val in defaults.items():
+        merged[key] = from_func.get(key, from_file.get(key, val))
+
+    # check for unknown key
+    uff1 = set(from_file) - set(defaults)
+    uff2 = set(from_func) - set(defaults)
+
+    if uff1:
+        raise TypeError(f'setup_logging() got an unexpected keyword argument(s): {uff1}')
+    if uff2:
+        raise ValueError(f'logger_tt unknown fields: {uff2}')
+
+    return merged
+
+
+def setup_logging(config_path="", log_path="", **logger_tt_config) -> LogConfig:
     """Setup logging configuration
-        :param config_path: Path to log config file. Use default config if this is not provided
-        :param log_path: Path to store log file. Override 'filename' field of 'handlers' in
-            default config.
-        :param capture_print: Log message that is printed out with print() function
-        :param strict: only used when capture_print is True. If strict is True, then log
-            everything that use sys.stdout.write().
-        :param guess_level: auto guess logging level of captured message
-        :param full_context: int, whether to log full local scope on exception or not and up to what level
-        :param suppress_level_below: For logger in the suppress list, any message below this level
-            is not processed, not printed out nor logged to file
-        :param use_multiprocessing: set this to True if your code use multiprocessing. This flag
-            switches the queue used for logging from queue.Queue to multiprocessing.Queue .
-            This option can only be used here.
+    :param config_path: Path to log config file. Use default config if this is not provided
+    :param log_path: Path to store log file. Override 'filename' field of 'handlers' in
+        default config.
+    :param logger_tt_config: keyword only arguments to config the logger. Fields in this dictionary
+        will override the same field in the config file.
+        :key capture_print: bool, log message that is printed out with print() function
+        :key strict       : bool, only used when capture_print is True.
+                            If strict is True, then log everything that use sys.stdout.write().
+        :key guess_level  : bool, auto guess logging level of captured message
+        :key full_context : int, whether to log full local scope on exception or not and up to what level
+        :key suppress     : list[str], name of loggers to be suppressed.
+        :key suppress_level_below: int, for logger in the suppress list,
+                                    any message below this level is not processed, not printed out nor logged to file
+        :key use_multiprocessing : bool or str, set this to True if your code use multiprocessing.
+                                    This flag switches the queue used for logging from
+                                    queue.Queue to multiprocessing.Queue . This option can only be used here.
     """
     if config_path:
         cfgpath = Path(config_path)
@@ -98,27 +120,18 @@ def setup_logging(config_path="", log_path="",
     # load config from file
     config = load_from_file(cfgpath)
     ensure_path(config, log_path)
-    logger_tt_config = config.pop('logger_tt', {})
-
-    # suppress
-    internal_config.suppress_level_below = suppress_level_below
-    internal_config.suppress_logger(logger_tt_config.get('suppress'))
+    logger_tt_cfg = config.pop('logger_tt', {})
 
     # initialize
     logging.config.dictConfig(config)
-
-    # set internal config
-    internal_config.full_context = full_context
-    internal_config.strict = strict
-    internal_config.guess_level = guess_level
-    internal_config.capture_print = capture_print
 
     if current_process().name == 'MainProcess':
         logging.debug('New log started'.center(50, '_'))
         logging.debug(f'Log config file: {cfgpath}')
 
-    # set logging mode accordingly
-    internal_config.set_mode(use_multiprocessing)
+    # set internal config
+    iconfig = merge_config(logger_tt_cfg, logger_tt_config)
+    internal_config.from_dict(iconfig)
 
     # capture other messages
     sys.excepthook = handle_exception

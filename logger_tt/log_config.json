@@ -51,6 +51,12 @@
     "strict": false,
     "guess_level": false,
     "full_context": 0,
-    "use_multiprocessing": false
+    "use_multiprocessing": false,
+    "default_logger_formats": {
+      "normal": ["%(name)s", "%(filename)s"],
+      "thread": ["%(message)s", "%(threadName)s %(message)s"],
+      "multiprocess": ["%(message)s", "%(processName)s %(message)s"],
+      "both": ["%(message)s", "%(processName)s %(threadName)s %(message)s"]
+    }
   }
 }

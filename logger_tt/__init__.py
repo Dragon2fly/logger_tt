@@ -5,17 +5,16 @@ from pathlib import Path
 from logging.config import dictConfig
 from logging import getLogger
 from .inspector import analyze_frame, logging_disabled
-from .core import LogConfig
+from .core import LogConfig, DefaultFormatter
 from multiprocessing import current_process
 
 __author__ = "Duc Tin"
 __all__ = ['setup_logging', 'logging_disabled', 'getLogger', 'logger']
 
-
 """Config log from file and make it also logs uncaught exception"""
 
 internal_config = LogConfig()
-logger = getLogger('logger_tt')         # pre-made default logger for all modules
+logger = getLogger('logger_tt')  # pre-made default logger for all modules
 logger.setLevel(logging.DEBUG)
 
 
@@ -53,13 +52,18 @@ def ensure_path(config: dict, override_log_path: str = ""):
 
 def load_from_file(f: Path) -> dict:
     if f.suffix in ['.yaml', '.yml']:
-        import yaml     # will raise error if pyyaml is not installed
+        import yaml  # will raise error if pyyaml is not installed
         dict_cfg = yaml.safe_load(f.read_text())
     else:
         with f.open() as fp:
             dict_cfg = json.load(fp)
 
-    # add default formatter to use logger_tt logger right on spot
+    # add default formatters to use logger_tt logger right on spot
+    try:
+        dlf = dict_cfg['logger_tt'].pop('default_logger_formats', {})
+    except KeyError:
+        dlf = {}
+    DefaultFormatter.default_formats.update(dlf)
     for formatter in dict_cfg['formatters'].values():
         if not formatter.get('class'):
             formatter['class'] = 'logger_tt.core.DefaultFormatter'
@@ -67,7 +71,7 @@ def load_from_file(f: Path) -> dict:
     return dict_cfg
 
 
-def merge_config(from_file:dict, from_func:dict) -> dict:
+def merge_config(from_file: dict, from_func: dict) -> dict:
     """Override logger_tt config of from_file by
         the argument passed to the setup_logging function
     """
@@ -112,10 +116,10 @@ def setup_logging(config_path="", log_path="", **logger_tt_config) -> LogConfig:
     if config_path:
         cfgpath = Path(config_path)
         assert cfgpath.is_file(), 'Input config path is not a file!'
-        assert cfgpath.suffix in ['.yaml', '.json'], 'Config file type must be either yaml or json!'
+        assert cfgpath.suffix in ['.yaml', '.json', '.yml'], 'Config file type must be either yaml, yml or json!'
         assert cfgpath.exists(), f'Config file path not exists! {cfgpath.absolute()}'
     else:
-        cfgpath = Path(__file__).parent / 'log_config.json'
+        cfgpath = Path(__file__).parent / 'log_config.yaml'
 
     # load config from file
     config = load_from_file(cfgpath)
@@ -149,6 +153,7 @@ class ExceptionLogger(logging.Logger):
                 logger.exception(e)
             # then move on
     """
+
     def exception(self, msg, *args, exc_info=True, **kwargs):
         if exc_info:
             exc_type, exc_value, exc_traceback = sys.exc_info()

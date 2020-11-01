@@ -41,7 +41,7 @@ class LogConfig:
 
         self.original_stdout = sys.stdout
 
-    def from_dict(self, odict:dict):
+    def from_dict(self, odict: dict):
         # store basic settings
         for key in ['full_context', 'strict', 'guess_level']:
             setattr(self, key, odict[key])
@@ -259,6 +259,11 @@ class LogRecordSocketReceiver(socketserver.ThreadingTCPServer):
 
 
 class DefaultFormatter(logging.Formatter):
+    default_formats = dict(normal=["%(name)s:%(lineno)d", "%(filename)s:%(lineno)d"],
+                           thread=["%(message)s", "%(threadName)s %(message)s"],
+                           multiprocess=["%(message)s", "%(processName)s %(message)s"],
+                           both=["%(message)s", "%(processName)s %(threadName)s %(message)s"])
+
     def __init__(self, fmt: str = '', datefmt: str = '', style: str = ''):
         super(DefaultFormatter, self).__init__(fmt=fmt, datefmt=datefmt)
 
@@ -266,34 +271,34 @@ class DefaultFormatter(logging.Formatter):
         for case, fmt in self._standardize(fmt).items():
             self._logger_tt_formatters[case] = logging.Formatter(fmt=fmt, datefmt=datefmt, style=style)
 
-    @staticmethod
-    def _standardize(fmt):
+        self._logger_names = {}
+
+    def _standardize(self, fmt):
         formatters = {}
 
-        # normal format
-        if re.search(r'%\(filename\)s.*%\(lineno\)d', fmt):
-            standardized_fmt = fmt
-        else:
-            standardized_fmt = fmt.replace('%(filename)s', '')
-            standardized_fmt = re.sub(r'[:-]\s*%\(lineno\)d', r'', standardized_fmt)
-            standardized_fmt = standardized_fmt.replace('%(name)s', '%(filename)s:%(lineno)d')
-
         # concurrent format
-        concurrent_fmt = standardized_fmt.replace('%(threadName)s', '').replace('%(processName)s', '')
-        thread_fmt = concurrent_fmt.replace('%(asctime)s', '%(asctime)s | %(threadName)s')
-        mp_fmt = concurrent_fmt.replace('%(asctime)s', '%(asctime)s | %(processName)s')
-        mp_thread_fmt = concurrent_fmt.replace('%(asctime)s', '%(asctime)s | %(processName)s %(threadName)s')
-
-        # stored format strings by cases
-        formatters['normal'] = standardized_fmt
-        formatters['thread'] = thread_fmt
-        formatters['multiprocess'] = mp_fmt
-        formatters['both'] = mp_thread_fmt
+        concurrent_fmt = fmt.replace('%(threadName)s', '').replace('%(processName)s', '')
+        for _type, replacement in self.default_formats.items():
+            old, new = replacement
+            formatters[_type] = concurrent_fmt.replace(old, new)
 
         return formatters
 
+    def _get_qualified_name(self, pathname):
+        pathname = pathname.replace('\\', '/')
+        name = self._logger_names.get(pathname)
+        if not name:
+            for module_name, module in sys.modules.items():
+                file = getattr(module, '__file__', None)
+                if file and file.replace('\\', '/') == pathname:
+                    self._logger_names[pathname] = module_name
+                    return module_name
+
+        return name
+
     def format(self, record):
         if record.name == 'logger_tt':
+            record.filename = self._get_qualified_name(record.pathname) or record.filename
             if record.processName == 'MainProcess' and record.threadName == 'MainThread':
                 return self._logger_tt_formatters['normal'].format(record)
             elif record.processName == 'MainProcess' and record.threadName != 'MainThread':

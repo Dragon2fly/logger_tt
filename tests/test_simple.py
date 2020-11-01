@@ -148,8 +148,18 @@ def test_default_logger(capsys):
     assert 'critical' in stdout_data
 
     log_data = log.read_text()
-    assert re.search(r'test_simple\.py:\d+.+debug', log_data)
-    assert re.search(r'test_simple\.py:\d+.+info', log_data)
-    assert re.search(r'test_simple\.py:\d+.+warning', log_data)
-    assert re.search(r'test_simple\.py:\d+.+error', log_data)
-    assert re.search(r'test_simple\.py:\d+.+critical', log_data)
+    assert re.search(r'test_simple:\d+.+debug', log_data)
+    assert re.search(r'test_simple:\d+.+info', log_data)
+    assert re.search(r'test_simple:\d+.+warning', log_data)
+    assert re.search(r'test_simple:\d+.+error', log_data)
+    assert re.search(r'test_simple:\d+.+critical', log_data)
+
+
+def test_default_logger2():
+    with setup_logging():
+        from tests.sub_module import run
+
+        run()
+
+    log_data = log.read_text()
+    assert len(re.findall(r"tests.sub_module:\d+ INFO", log_data)) == 2

@@ -453,16 +453,16 @@ Parameter with the same name passed in `setup_logging` function will override th
     The content of `log.txt` should be similar to below:
     
     ```text
-    [2020-09-11 00:06:14] [root:129 DEBUG] _________________New log started__________________
+    [2020-10-28 20:39:14] [root:129 DEBUG] _________________New log started__________________
     [2020-10-28 20:39:17] [root:130 DEBUG] Log config file: D:\my_project\log_config.json
     [2020-10-28 20:39:17] [root:131 DEBUG] Logging server started!
-    [2020-10-28 20:39:18] [main.py:19 INFO] Parent process is ready to spawn child
-    [2020-10-28 20:39:19 | Process-2] [tmp.py:12 INFO] child process 1: started
-    [2020-10-28 20:39:19 | Process-1] [tmp.py:12 INFO] child process 0: started
-    [2020-10-28 20:39:19 | Process-3] [tmp.py:12 INFO] child process 2: started
-    [2020-10-28 20:39:25 | Process-1] [tmp.py:14 INFO] child process 0: stopped
-    [2020-10-28 20:39:27 | Process-3] [tmp.py:14 INFO] child process 2: stopped
-    [2020-10-28 20:39:29 | Process-2] [tmp.py:14 INFO] child process 1: stopped
+    [2020-10-28 20:39:22] [__main__:28 INFO] Parent process is ready to spawn child
+    [2020-10-28 20:39:22] [__mp_main__:16 INFO] Process-3 child process 2: started
+    [2020-10-28 20:39:22] [__mp_main__:16 INFO] Process-2 child process 1: started
+    [2020-10-28 20:39:22] [__mp_main__:16 INFO] Process-1 child process 0: started
+    [2020-10-28 20:39:23] [__mp_main__:18 INFO] Process-2 child process 1: stopped
+    [2020-10-28 20:39:23] [__mp_main__:18 INFO] Process-3 child process 2: stopped
+    [2020-10-28 20:39:24] [__mp_main__:18 INFO] Process-1 child process 0: stopped
     ```
 
    **Note**: Under linux, to use `queueHandler`, you must pass `use_multiprocessing="fork"` to `setup_logging`.<br>
@@ -511,7 +511,7 @@ Parameter with the same name passed in `setup_logging` function will override th
       console:
         class: logging.StreamHandler
         level: INFO
-        formatter: simple
+        formatter: brief
         stream: ext://sys.stdout
     
       error_file_handler:
@@ -541,6 +541,11 @@ Parameter with the same name passed in `setup_logging` function will override th
       guess_level: False
       full_context: 0
       use_multiprocessing: False
+      default_logger_formats:
+        normal: ["%(name)s", "%(filename)s"]
+        thread: ["%(message)s", "%(threadName)s %(message)s"]
+        multiprocess: ["%(message)s", "%(processName)s %(message)s"]
+        both: ["%(message)s", "%(processName)s %(threadName)s %(message)s"]
     ```
 
 <br>
@@ -602,12 +607,43 @@ Parameter with the same name passed in `setup_logging` function will override th
        "strict": false,
        "guess_level": false,
        "full_context": 0,
-       "use_multiprocessing": false
+       "use_multiprocessing": false,
+       "default_logger_formats": {
+          "normal": ["%(name)s", "%(filename)s"],
+          "thread": ["%(message)s", "%(threadName)s %(message)s"],
+          "multiprocess": ["%(message)s", "%(processName)s %(message)s"],
+          "both": ["%(message)s", "%(processName)s %(threadName)s %(message)s"]
+       }
      }
    }
    ```
 
 # changelog
+## 1.5.2
+This version is all about the pre-made logger named `logger_tt` 
+
+* `logger_tt` now can detect the qualified `__name__` of the module that calls it.
+ Instead of `filename`, output log line will have the `__name__` as regular logger.
+ 
+  For example:
+ 
+      [2020-07-21 11:24:19] [my_module.py:5 DEBUG] Module is initialized
+      [2020-07-21 11:24:19] [sub_module.py:15 DEBUG] Entering sub module
+    
+  Now becomes
+ 
+      [2020-07-21 11:24:19] [__main__:5 DEBUG] Module is initialized
+      [2020-07-21 11:24:19] [my_module.submodule:15 DEBUG] Entering sub module
+ 
+* Suppressing loggers also works with log records output by `logger_tt` by using the qualified `__name__` too.
+ For example, suppressing `my_module.submodule` will tell `logger_tt` not to output the second line.
+ 
+  This is much better than suppressing `logger_tt` if you use this same logger in other modules too. 
+
+* You now can define fields of log record for `logger_tt` in the log config file too. 
+ Just looks for `default_logger_formats` section. 
+ It works by replacing the field in the formatters that are used by any handler of the root logger.
+
 ## 1.5.1
 * Use `socketHandler` as default for multiprocessing.
  Under linux, to use `queueHandler`, user must pass `use_multiprocessing="fork"` to `setup_logging` 

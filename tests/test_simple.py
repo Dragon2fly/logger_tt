@@ -155,7 +155,7 @@ def test_default_logger(capsys):
     assert re.search(r'test_simple:\d+.+critical', log_data)
 
 
-def test_default_logger2():
+def test_default_logger_submodule():
     with setup_logging():
         from tests.sub_module import run
 
@@ -163,3 +163,14 @@ def test_default_logger2():
 
     log_data = log.read_text()
     assert len(re.findall(r"tests.sub_module:\d+ INFO", log_data)) == 2
+
+
+def test_default_logger_suppress():
+    with setup_logging() as log_config:
+        from tests.sub_module import run
+
+        log_config.suppress_loggers(['tests.sub_module'])
+        run()
+
+    log_data = log.read_text()
+    assert len(re.findall(r"tests.sub_module:\d+ INFO", log_data)) == 0

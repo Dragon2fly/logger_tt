@@ -14,8 +14,6 @@ __all__ = ['setup_logging', 'logging_disabled', 'getLogger', 'logger']
 """Config log from file and make it also logs uncaught exception"""
 
 internal_config = LogConfig()
-logger = getLogger('logger_tt')  # pre-made default logger for all modules
-logger.setLevel(logging.DEBUG)
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -119,7 +117,7 @@ def setup_logging(config_path="", log_path="", **logger_tt_config) -> LogConfig:
         assert cfgpath.suffix in ['.yaml', '.json', '.yml'], 'Config file type must be either yaml, yml or json!'
         assert cfgpath.exists(), f'Config file path not exists! {cfgpath.absolute()}'
     else:
-        cfgpath = Path(__file__).parent / 'log_config.yaml'
+        cfgpath = Path(__file__).parent / 'log_config.json'
 
     # load config from file
     config = load_from_file(cfgpath)
@@ -154,6 +152,8 @@ class ExceptionLogger(logging.Logger):
             # then move on
     """
 
+    _logger_names = {}
+
     def exception(self, msg, *args, exc_info=True, **kwargs):
         if exc_info:
             exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -166,5 +166,38 @@ class ExceptionLogger(logging.Logger):
         else:
             logging.error(msg, *args, exc_info=exc_info, **kwargs)
 
+    def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None, extra=None, sinfo=None):
+        record = super().makeRecord(name, level, fn, lno, msg, args, exc_info, func, extra, sinfo)
+
+        if name == 'logger_tt':
+            # try to get the __name__ of the module that use the default logger: logger_tt
+            pathname = fn.replace('\\', '/')
+            qualified_name = self._logger_names.get(pathname)
+            if not qualified_name:
+                for qualified_name, module in sys.modules.items():
+                    file = getattr(module, '__file__', None)
+                    if file and file.replace('\\', '/') == pathname:
+                        self._logger_names[pathname] = qualified_name
+                        break
+
+            if qualified_name == '__main__' and record.processName != 'MainProcess':
+                qualified_name = '__mp_main__'
+
+            record.filename = qualified_name or record.filename
+
+        return record
+
 
 logging.setLoggerClass(ExceptionLogger)
+logger = getLogger('logger_tt')  # pre-made default logger for all modules
+logger.setLevel(logging.DEBUG)
+
+
+def logger_tt_filter(record):
+    if record.filename not in internal_config.suppress_list:
+        return True
+    if record.levelno > internal_config.suppress_level_below:
+        return True
+
+
+logger.addFilter(logger_tt_filter)

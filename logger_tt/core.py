@@ -1,6 +1,5 @@
 import socket
 import sys
-import re
 import logging
 import atexit
 import platform
@@ -41,6 +40,9 @@ class LogConfig:
 
         self.original_stdout = sys.stdout
 
+        # suppress logger list for usage in filter
+        self.suppress_list = set()
+
     def from_dict(self, odict: dict):
         # store basic settings
         for key in ['full_context', 'strict', 'guess_level']:
@@ -56,7 +58,7 @@ class LogConfig:
                 raise ValueError(f'"level" string is incorrect: {level}')
             level = getattr(logging, level.upper())
         self.suppress_level_below = level
-        self.suppress_logger(odict.get("suppress"))
+        self.suppress_loggers(odict.get("suppress"))
 
         # set logging mode accordingly
         self.set_mode(odict['use_multiprocessing'])
@@ -130,13 +132,15 @@ class LogConfig:
             serving.start()
             root_logger.debug('Logging server started!')
 
-    def suppress_logger(self, loggers):
+    def suppress_loggers(self, loggers):
         if not loggers:
             return
 
         for name in loggers:
             logger = logging.getLogger(name)
             logger.level = self.suppress_level_below
+
+        self.suppress_list.update(loggers)
 
     @property
     def capture_print(self):
@@ -259,7 +263,11 @@ class LogRecordSocketReceiver(socketserver.ThreadingTCPServer):
 
 
 class DefaultFormatter(logging.Formatter):
-    default_formats = dict(normal=["%(name)s:%(lineno)d", "%(filename)s:%(lineno)d"],
+    """Based on the format string of any handler in root, we make new formatters for
+        the default logger - logger_tt. This is a way to inject information but
+        using the same handlers as regular logger.
+    """
+    default_formats = dict(normal=["%(name)s", "%(filename)s"],
                            thread=["%(message)s", "%(threadName)s %(message)s"],
                            multiprocess=["%(message)s", "%(processName)s %(message)s"],
                            both=["%(message)s", "%(processName)s %(threadName)s %(message)s"])
@@ -271,34 +279,22 @@ class DefaultFormatter(logging.Formatter):
         for case, fmt in self._standardize(fmt).items():
             self._logger_tt_formatters[case] = logging.Formatter(fmt=fmt, datefmt=datefmt, style=style)
 
-        self._logger_names = {}
-
     def _standardize(self, fmt):
-        formatters = {}
+        formatters = {'normal': fmt.replace(self.default_formats['normal'][0], self.default_formats['normal'][1])}
 
         # concurrent format
-        concurrent_fmt = fmt.replace('%(threadName)s', '').replace('%(processName)s', '')
+        concurrent_fmt = formatters['normal'].replace('%(threadName)s', '').replace('%(processName)s', '')
         for _type, replacement in self.default_formats.items():
+            if _type == 'normal':
+                continue
+
             old, new = replacement
             formatters[_type] = concurrent_fmt.replace(old, new)
 
         return formatters
 
-    def _get_qualified_name(self, pathname):
-        pathname = pathname.replace('\\', '/')
-        name = self._logger_names.get(pathname)
-        if not name:
-            for module_name, module in sys.modules.items():
-                file = getattr(module, '__file__', None)
-                if file and file.replace('\\', '/') == pathname:
-                    self._logger_names[pathname] = module_name
-                    return module_name
-
-        return name
-
     def format(self, record):
         if record.name == 'logger_tt':
-            record.filename = self._get_qualified_name(record.pathname) or record.filename
             if record.processName == 'MainProcess' and record.threadName == 'MainThread':
                 return self._logger_tt_formatters['normal'].format(record)
             elif record.processName == 'MainProcess' and record.threadName != 'MainThread':

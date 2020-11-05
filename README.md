@@ -19,41 +19,36 @@ setup_logging(full_context=1)
 Then from any of your modules, you just need to get a `logger` and start logging.
 There are two ways that you could obtain a logger.
 
-* **Conventional way**:
+* **Conventional way**: as you have always done it that way
 
   ```python
   from logging import getLogger
   
   logger = getLogger(__name__)
-  
-  logger.debug('Module is initialized')
-  logger.info('Making connection ...')
-  ```
-  
-  ```
-  [2020-07-21 11:21:07] [__main__:7 DEBUG] Module is initialized
-  [2020-07-21 11:21:07] [__main__:8 INFO] Making connection ...
   ```
 
-* **Convenient way**:
+* **Convenient way**: use a pre-made logger named `logger_tt` from this package.
 
   ```python
   from logger_tt import logger
-  
-  logger.debug('Module is initialized')
-  logger.info('Making connection ...')
   ```
-  
-  ```
-  [2020-07-21 11:24:19] [my_module.py:5 DEBUG] Module is initialized
-  [2020-07-21 11:24:19] [my_module.py:6 INFO] Making connection ...
-  ```
-  
-  This uses a pre-made logger whose name is `logger_tt`.
-  The log line written out by this logger will have python filename instead of the logger name.
-  Also, this logger will automatically inject process's name and thread's name in case of logging from concurrent code.
 
-Both ways will provide your project with the following **default** log behavior:
+After that, you start logging as usual:
+
+```python
+logger.debug('Module is initialized')
+logger.info('Making connection ...')
+
+# output
+[2020-07-21 11:24:19] [__main__:5 DEBUG] Module is initialized
+[2020-07-21 11:24:19] [__main__:6 INFO] Making connection ...
+```
+  
+Both ways give you the same output except the line number, obviously.<br>
+The pre-made logger also has an advantage that it will automatically inject 
+`threadName` and `processName` to the output in case of multithreading or multiprocessing. 
+
+Both ways will provide your project with the following **default** log behaviors:
 
 * **log file**: Assume that your `working directory` is `project_root`,
  log.txt is stored at your `project_root/logs/` folder. <br>

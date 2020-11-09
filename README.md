@@ -554,7 +554,6 @@ Parameter with the same name passed in `setup_logging` function will override th
         both: ["%(message)s", "%(processName)s %(threadName)s %(message)s"]
     ```
 
-<br>
 2. Json format:
 
    log_config.json:

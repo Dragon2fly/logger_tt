@@ -2,6 +2,9 @@
 Make configuring logging simpler and log even exceptions that you forgot to catch. <br>
 Even multiprocessing logging becomes a breeze.
 
+[![Downloads](https://pepy.tech/badge/logger-tt)](https://pepy.tech/project/logger-tt)
+[![Supported Versions](https://img.shields.io/pypi/v/logger_tt.svg)](https://pypi.org/project/logger_tt)
+
 ## Install
 * From PYPI: `pip install logger_tt`
 * From Github: clone or download this repo then `python setup.py install` 

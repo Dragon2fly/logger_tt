@@ -88,6 +88,7 @@ def test_guess_message_level(msg):
 
 @pytest.mark.parametrize("level", [logging.WARNING, logging.ERROR])
 def test_suppress_logger(capsys, level):
+    # suppess by config file
     with setup_logging(suppress_level_below=level):
         from tests.exchangelib_logger import fox_run
 
@@ -102,6 +103,21 @@ def test_suppress_logger(capsys, level):
     elif level == logging.ERROR:
         assert 'WARNING' not in stdout_data
 
+    assert 'ERROR' in stdout_data
+    assert 'CRITICAL' in stdout_data
+
+
+def test_suppress_logger2(capsys):
+    # suppress by the code
+    with setup_logging(suppress=['urllib3']):
+        from tests.exchangelib_logger import fox_run
+
+        fox_run()
+
+    stdout_data = capsys.readouterr().out
+    assert 'DEBUG' not in stdout_data
+    assert 'INFO' in stdout_data
+    assert 'WARNING' in stdout_data
     assert 'ERROR' in stdout_data
     assert 'CRITICAL' in stdout_data
 

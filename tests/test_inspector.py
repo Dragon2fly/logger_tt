@@ -177,3 +177,13 @@ def test_del_logging():
     output = run(cmd, stderr=PIPE, universal_newlines=True)
     assert "Logging error" not in output.stderr
 
+
+def test_logging_class():
+    # pre-existing logger should also have a new exception handler
+    cmd = [sys.executable, "sub_module.py"]
+    output = run(cmd, stdout=PIPE, universal_newlines=True)
+    data = log.read_text()
+    assert "a = 3" in data
+    assert "b = 0" in data
+    assert "a = 3" in output.stdout
+    assert "b = 0" in output.stdout

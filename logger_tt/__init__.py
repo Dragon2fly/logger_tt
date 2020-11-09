@@ -125,7 +125,11 @@ def setup_logging(config_path="", log_path="", **logger_tt_config) -> LogConfig:
     logger_tt_cfg = config.pop('logger_tt', {})
 
     # initialize
-    logging.config.dictConfig(config)
+    for name in logging.root.manager.loggerDict:
+        existing_logger = logging.getLogger(name)
+        existing_logger.__class__ = ExceptionLogger
+    else:
+        logging.config.dictConfig(config)
 
     if current_process().name == 'MainProcess':
         logging.debug('New log started'.center(50, '_'))
@@ -188,11 +192,6 @@ class ExceptionLogger(logging.Logger):
         return record
 
 
-logging.setLoggerClass(ExceptionLogger)
-logger = getLogger('logger_tt')  # pre-made default logger for all modules
-logger.setLevel(logging.DEBUG)
-
-
 def logger_tt_filter(record):
     if record.filename not in internal_config.suppress_list:
         return True
@@ -200,4 +199,7 @@ def logger_tt_filter(record):
         return True
 
 
+logging.setLoggerClass(ExceptionLogger)
+logger = getLogger('logger_tt')  # pre-made default logger for all modules
+logger.setLevel(logging.DEBUG)
 logger.addFilter(logger_tt_filter)

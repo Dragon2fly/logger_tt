@@ -373,7 +373,7 @@ Parameter with the same name passed in `setup_logging` function will override th
    A bunch of unwanted messages may hide the one that come from your own module. 
    To prevent that and also reduce log file size, we need to silent unwanted loggers.
    
-   There are two ways to silent a logger with config file:
+   By config file, there are two ways to silent a logger:
    
    * Create a new logger: in `logger` section of config file, 
    add a new logger whose name is the same with the one you want to silent. 
@@ -398,7 +398,15 @@ Parameter with the same name passed in `setup_logging` function will override th
      For example suppress any message below `ERROR` level that comes from loggers in `suppress list`:
      
          setup_logging(suppress_level_below=logging.ERROR)
+   
+   You could also suppress loggers directly by `setup_logging`:
+   
+   ```python
+   from logger_tt import setup_logging    
 
+   setup_logging(suppress=['urllib3', 'exchangelib'])
+   ```
+   
 7. Logging in multiprocessing:
     
     This is archived by using multiprocessing queues or a socket server.
@@ -615,7 +623,7 @@ Parameter with the same name passed in `setup_logging` function will override th
 
 # changelog
 ## 1.5.2
-This version is all about the pre-made logger named `logger_tt` 
+**Improved the pre-made logger named `logger_tt`** 
 
 * `logger_tt` now can detect the qualified `__name__` of the module that calls it.
  Instead of `filename`, output log line will have the `__name__` as regular logger.
@@ -638,6 +646,12 @@ This version is all about the pre-made logger named `logger_tt`
 * You now can define fields of log record for `logger_tt` in the log config file too. 
  Just looks for `default_logger_formats` section. 
  It works by replacing the field in the formatters that are used by any handler of the root logger.
+
+**Pre-existing loggers:**<br> 
+Before this version, if you import submodules before importing `logger_tt` and 
+there are loggers in submodules, these loggers do not inspect exception when you call `logger.exception()`. 
+That is because there class was different than loggers created after importing `logger_tt`.
+Now all loggers have the same new class regardless the point of importing `logger_tt`.
 
 ## 1.5.1
 * Use `socketHandler` as default for multiprocessing.

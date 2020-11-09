@@ -3,7 +3,8 @@ Make configuring logging simpler and log even exceptions that you forgot to catc
 Even multiprocessing logging becomes a breeze.
 
 [![Downloads](https://pepy.tech/badge/logger-tt)](https://pepy.tech/project/logger-tt)
-[![Supported Versions](https://img.shields.io/pypi/v/logger_tt.svg)](https://pypi.org/project/logger_tt)
+[![PyPI version](https://badge.fury.io/py/logger-tt.svg)](https://pypi.org/project/logger-tt/)
+[![GitHub license](https://img.shields.io/github/license/Dragon2fly/logger_tt)](https://github.com/Dragon2fly/logger_tt/blob/master/LICENSE)
 
 ## Install
 * From PYPI: `pip install logger_tt`

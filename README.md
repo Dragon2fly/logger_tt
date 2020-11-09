@@ -656,6 +656,9 @@ there are loggers in submodules, these loggers do not inspect exception when you
 That is because there class was different than loggers created after importing `logger_tt`.
 Now all loggers have the same new class regardless the point of importing `logger_tt`.
 
+**setup_logging()**: This function should only be called once. 
+Add a warning if it is called more than one time.
+
 ## 1.5.1
 * Use `socketHandler` as default for multiprocessing.
  Under linux, to use `queueHandler`, user must pass `use_multiprocessing="fork"` to `setup_logging` 

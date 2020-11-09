@@ -111,6 +111,9 @@ def setup_logging(config_path="", log_path="", **logger_tt_config) -> LogConfig:
                                     This flag switches the queue used for logging from
                                     queue.Queue to multiprocessing.Queue . This option can only be used here.
     """
+    if internal_config.initialized:
+        logger.warning('Re-initializing logger_tt. "setup_logging()" should only be called one.')
+
     if config_path:
         cfgpath = Path(config_path)
         assert cfgpath.is_file(), 'Input config path is not a file!'

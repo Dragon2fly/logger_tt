@@ -43,6 +43,13 @@ class LogConfig:
         # suppress logger list for usage in filter
         self.suppress_list = set()
 
+        # initialized counter
+        self.__initialized = 0
+
+    @property
+    def initialized(self):
+        return self.__initialized
+
     def from_dict(self, odict: dict):
         # store basic settings
         for key in ['full_context', 'strict', 'guess_level']:
@@ -62,6 +69,8 @@ class LogConfig:
 
         # set logging mode accordingly
         self.set_mode(odict['use_multiprocessing'])
+
+        self.__initialized += 1
 
     def set_mode(self, use_multiprocessing):
         """Select logging method according to platform and multiprocessing"""

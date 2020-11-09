@@ -109,17 +109,12 @@ def test_suppress_logger(capsys, level):
 
 def test_suppress_logger2(capsys):
     # suppress by the code
-    with setup_logging(suppress=['urllib3']):
-        from tests.exchangelib_logger import fox_run
-
-        fox_run()
+    with setup_logging(suppress=['suppressed_logger']):
+        logger = getLogger('suppressed_logger')
+        logger.info('Ha ha, this should not be logged')
 
     stdout_data = capsys.readouterr().out
-    assert 'DEBUG' not in stdout_data
-    assert 'INFO' in stdout_data
-    assert 'WARNING' in stdout_data
-    assert 'ERROR' in stdout_data
-    assert 'CRITICAL' in stdout_data
+    assert 'INFO' not in stdout_data
 
 
 def test_logging_disabled(capsys):
@@ -190,3 +185,13 @@ def test_default_logger_suppress():
 
     log_data = log.read_text()
     assert len(re.findall(r"tests.sub_module:\d+ INFO", log_data)) == 0
+
+
+def test_double_setup_logging():
+    # there should be a warning if setup_logging() is called multiple times
+    with setup_logging() as log_config:
+        with setup_logging() as log_config:
+            pass
+
+    log_data = log.read_text()
+    assert "WARNING" in log_data

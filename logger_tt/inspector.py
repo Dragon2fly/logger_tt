@@ -15,6 +15,7 @@ MEM_PATTERN = re.compile(r'<.*object at 0x[0-9A-Fa-f]+>')
 def get_recur_attr(obj, attr: str):
     """
     Follow the dot `.` in attribute string `attr` to the final object
+
     :param obj: any object
     :param attr: string of attribute access
     :return: the final desire object or '!!! Not Exists'
@@ -43,6 +44,7 @@ def get_repr(obj, multiline_indent: int = 0) -> str:
     """
     Pick a more useful representation of object `obj` between __str__ and __repr__
      if it available.
+
     :param obj: any of object
     :param multiline_indent: indent level for the second line onward
     :return: string of object representation
@@ -66,9 +68,22 @@ def get_repr(obj, multiline_indent: int = 0) -> str:
         return _repr_
 
 
+def is_half_ended(line: str) -> bool:
+    """
+    Check if we a given a last line of a multiline statement with brackets
+    """
+    if line.count(')') > line.count('('):
+        return True
+    if line.count('}') > line.count('{'):
+        return True
+    if line.count(']') > line.count('['):
+        return True
+
+
 def is_full_statement(*lines: str) -> bool:
     """
     Check if a set of lines makes up a full python statement
+
     :param lines: list of line of python code
     :return: True if line in `lines` made up a full python statement
     """
@@ -79,9 +94,10 @@ def is_full_statement(*lines: str) -> bool:
         for t in tokenize.generate_tokens(stream.readline):
             pass
     except tokenize.TokenError as e:
-        if 'EOF in multi-line statement' in str(e):
+        if 'EOF in multi-line' in str(e):
             return False
-        raise
+        else:
+            return True
     else:
         return True
 
@@ -89,18 +105,24 @@ def is_full_statement(*lines: str) -> bool:
 def get_full_statement(filename, lineno: int) -> list:
     """
     Get all lines of python file `filename` that makes up a full statement starting from `lineno`
+
     :param filename: path to python source code file
     :param lineno: line number at with the statement started
-    :return: list of all lines that made up a python statement with indent striped
+    :return: list of maximum 5 lines that made up a python statement with indent striped,
     """
     lines = []
-    while True:
+    startno = lineno
+    while lineno <= startno + 5:
         line = linecache.getline(filename, lineno)
         if not line:
             break
 
         lines.append(line)
         if is_full_statement(*lines):
+            break
+
+        temp = ''.join(lines) + line
+        if is_half_ended(temp):
             break
 
         lineno += 1
@@ -134,6 +156,7 @@ def get_traceback_depth(trace_back) -> int:
 def analyze_frame(trace_back, full_context: int = False) -> str:
     """
     Read out variables' content surrounding the error line of code
+
     :param trace_back: A traceback object when exception occur
     :param full_context: Also export local variables that is not in the error line
             full_context == 0: export only variables that appear on the error line

@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 from subprocess import run, PIPE
 
-from logger_tt.inspector import get_recur_attr, get_repr, is_full_statement, MEM_PATTERN
+from logger_tt.inspector import get_recur_attr, get_repr, is_full_statement, get_full_statement, MEM_PATTERN
 
 
 __author__ = "Duc Tin"
@@ -187,3 +187,20 @@ def test_logging_class():
     assert "b = 0" in data
     assert "a = 3" in output.stdout
     assert "b = 0" in output.stdout
+
+
+def test_get_full_statement():
+    lines = get_full_statement('full_statement.py', 5)
+    assert lines == ['print(x,\n', '          y(1,\n', '            z),\n', '          2)']
+
+    lines = get_full_statement('full_statement.py', 6)
+    assert lines == ['y(1,\n', '  z),']
+
+    lines = get_full_statement('full_statement.py', 7)
+    assert lines == ['z),']
+
+    lines = get_full_statement('full_statement.py', 17)
+    assert lines == ['c:5}']
+
+    lines = get_full_statement('full_statement.py', 23)
+    assert lines == ['c]']

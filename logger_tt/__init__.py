@@ -92,8 +92,9 @@ def merge_config(from_file: dict, from_func: dict) -> dict:
     return merged
 
 
-def setup_logging(config_path="", log_path="", **logger_tt_config) -> LogConfig:
+def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config) -> LogConfig:
     """Setup logging configuration
+
     :param config_path: Path to log config file. Use default config if this is not provided
     :param log_path: Path to store log file. Override 'filename' field of 'handlers' in
         default config.

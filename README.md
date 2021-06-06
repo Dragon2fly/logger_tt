@@ -130,7 +130,7 @@ Parameter with the same name passed in `setup_logging` function will override th
    Without providing a config file, the default config file with the above **default** log behavior is used.
    You could copy `log_conf.yaml` or `log_conf.json` shipped with this package to start making your version.
 
-   **Warning**: To process `.yaml` config file, you need `pyyaml` package: `pip install pyyaml`
+   **Warning**: To process `.yaml` config file, you either need `pyyaml` or `ruamel.yaml` package installed. 
 
 3. Capture stdout:
 
@@ -625,6 +625,17 @@ Parameter with the same name passed in `setup_logging` function will override th
    ```
 
 # changelog
+## 1.5.3
+* Fixed: If an exception happened on the last line of multiline statement,
+ many irrelevant lines below it were included in the stacktrace. This happened,
+  for line such as `a]`, `b}`, `c)`. Now the logger will just stop at these line.
+  
+* Additional to the above, now the logger will only include maximum 5 lines,
+  counted from the line of an exception. 
+  
+* Added support for `ruamel.yaml` package. If you already have it installed, 
+  you don't need to install `pyyaml` to use `config.yaml` file 
+
 ## 1.5.2
 **Improved the pre-made logger named `logger_tt`** 
 

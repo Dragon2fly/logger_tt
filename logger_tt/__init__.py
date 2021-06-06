@@ -50,8 +50,19 @@ def ensure_path(config: dict, override_log_path: str = ""):
 
 def load_from_file(f: Path) -> dict:
     if f.suffix in ['.yaml', '.yml']:
-        import yaml  # will raise error if pyyaml is not installed
-        dict_cfg = yaml.safe_load(f.read_text())
+        try:
+            import yaml  # will raise error if pyyaml is not installed
+            safe_load = yaml.safe_load
+        except ImportError:
+            try:
+                from ruamel.yaml import YAML
+                yaml = YAML(typ='safe')
+                safe_load = yaml.load
+            except ImportError:
+                raise ImportError('Required package not found: "pyyaml" or "ruamel.yaml"')
+
+        dict_cfg = safe_load(f.read_text())
+
     else:
         with f.open() as fp:
             dict_cfg = json.load(fp)

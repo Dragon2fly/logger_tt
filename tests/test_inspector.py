@@ -3,6 +3,8 @@ import sys
 from pathlib import Path
 from subprocess import run, PIPE
 
+import pytest
+
 from logger_tt.inspector import get_recur_attr, get_repr, is_full_statement, get_full_statement, MEM_PATTERN
 
 
@@ -139,6 +141,7 @@ def test_log_exception():
     assert "-> b = 0" in data
 
 
+@pytest.mark.skipif(sys.version_info >= (3, 7), reason="'tokenize' module changed behavior")
 def test_multiline():
     cmd = [sys.executable, "exception_multiline.py"]
     run(cmd)
@@ -162,6 +165,7 @@ def test_multiline2():
     assert indent_2 == 27
 
 
+@pytest.mark.skip(reason='No example of deadlock')
 def test_deadlock():
     cmd = [sys.executable, "exception_deadlock.py"]
     run(cmd)

@@ -1,6 +1,7 @@
 import sys
 import logging
 import json
+import threading
 from pathlib import Path
 from logging.config import dictConfig
 from logging import getLogger
@@ -16,7 +17,7 @@ __all__ = ['setup_logging', 'logging_disabled', 'getLogger', 'logger']
 internal_config = LogConfig()
 
 
-def handle_exception(exc_type, exc_value, exc_traceback):
+def handle_exception(exc_type, exc_value, exc_traceback, thread_name=''):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
@@ -25,15 +26,35 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 
     # Root logger will log all other uncaught exceptions
     txt = analyze_frame(exc_traceback, full_context)
-    logging.error(f"Uncaught exception:\n"
+
+    # Exception in a child thread?
+    if thread_name:
+        thread_name = ' in ' + thread_name
+
+    logging.error(f"Uncaught exception{thread_name}:\n"
                   f"Traceback (most recent call last):\n"
                   f"{txt}",
                   exc_info=(exc_type, exc_value, None))
 
-    # As interpreter is going to shutdown after this function,
-    # objects are getting deleted.
-    # Disable further logging to prevent NameError exception
-    logging.disable(logging.CRITICAL)
+    if not thread_name:
+        # As interpreter is going to shutdown after this function,
+        # objects are getting deleted.
+        # Disable further logging to prevent NameError exception
+        logging.disable(logging.CRITICAL)
+        # Don't do this if exception is on child thread
+
+
+def thread_run_with_exception_logging(self):
+    """Do everything the Thread.run() do and add exception handling"""
+    try:
+        if self._target:
+            self._target(*self._args, **self._kwargs)
+    except Exception:
+        handle_exception(*sys.exc_info(), thread_name=self.name)
+    finally:
+        # Avoid a refcycle if the thread is running a function with
+        # an argument that has a member that points to the thread.
+        del self._target, self._args, self._kwargs
 
 
 def ensure_path(config: dict, override_log_path: str = ""):
@@ -156,6 +177,7 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
 
     # capture other messages
     sys.excepthook = handle_exception
+    threading.Thread.run = thread_run_with_exception_logging
     return internal_config
 
 

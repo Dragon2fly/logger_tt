@@ -3,14 +3,12 @@ import sys
 
 import pytest
 from subprocess import run, PIPE
-from logging import getLogger
 from pathlib import Path
 
 from logger_tt import setup_logging
 
 __author__ = "Duc Tin"
 
-logger = getLogger(__name__)
 log = Path.cwd() / 'logs/log.txt'
 
 

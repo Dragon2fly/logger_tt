@@ -11,8 +11,8 @@ Even multiprocessing logging becomes a breeze.
 * [Install](#install)
 * [Overview](#overview)
 * [Usage](#usage)
-  * [Overwrite the default log path](#-1-overwrite-the-default-log-path)
-  * [Provide your config file](#-2-provide-your-config-file)
+  * [Overwrite the default log path](#1-overwrite-the-default-log-path)
+  * [Provide your config file](#2-provide-your-config-file)
   * [Capture stdout](#3-capture-stdout)
   * [Exception logging](#4-exception-logging)
   * [try-except exception logging](#5-try-except-exception-logging)
@@ -152,7 +152,7 @@ Parameter with the same name passed in `setup_logging` function will override th
 
    **Warning**: To process `.yaml` config file, you either need `pyyaml` or `ruamel.yaml` package installed. 
 
-###3. Capture stdout:
+### 3. Capture stdout:
 
    If you have an old code base with a lot of `print(msg)` or `sys.stdout.write(msg)` and 
    don't have access or time to refactor them into something like `logger.info(msg)`, 
@@ -224,7 +224,7 @@ Parameter with the same name passed in `setup_logging` function will override th
    But messages that contain blank line(s) and other characters will be fully logged.
    For example, `\nTo day is a beautiful day\n` will be logged as is.  
 
-###4. Exception logging:
+### 4. Exception logging:
    
    Consider the following error code snippet:
    
@@ -346,7 +346,7 @@ Parameter with the same name passed in `setup_logging` function will override th
    If you are using python 3.8+, the new `threading.excepthook` won't be called as the uncaught exception
     has been handled by `logger-tt`. 
    
-###5. `try-except` exception logging:
+### 5. `try-except` exception logging:
    
    `exception context` logging also applies for `try-except` block.
     This means that if you call `logger.exception()` inside `except` block, 
@@ -396,7 +396,7 @@ Parameter with the same name passed in `setup_logging` function will override th
    will cause the first line of error report to be the message of exception. 
    In the case of the above example, it would be come `[2020-06-12 21:37:00] ERROR: division by zero`.
 
-###6. Silent unwanted loggers:
+### 6. Silent unwanted loggers:
    
    Third party modules also have loggers, and their messages are usually not related to your code.
    A bunch of unwanted messages may hide the one that come from your own module. 
@@ -436,7 +436,7 @@ Parameter with the same name passed in `setup_logging` function will override th
    setup_logging(suppress=['urllib3', 'exchangelib'])
    ```
    
-###7. Logging in multiprocessing:
+### 7. Logging in multiprocessing:
     
     This is archived by using multiprocessing queues or a socket server.
     
@@ -501,7 +501,7 @@ Parameter with the same name passed in `setup_logging` function will override th
    Other options `True`, `spawn`, `forkserver` will use `socketHandler` by default.<br> 
    This is to prevent you `set_start_method` as `spawn` under linux and thus `queueHandler` won't work.
    
-###8. Temporary disable logging:
+### 8. Temporary disable logging:
 
     Some block of code contain critical information, such as password processing, that should not be logged.
     You can disable logging for that block with a `logging_disabled` context:
@@ -521,7 +521,7 @@ Parameter with the same name passed in `setup_logging` function will override th
 
 # Sample config:
 Below are default config files that used by `logger-tt`. You can copy and modify them as needed. 
-##1. Yaml format:
+## 1. Yaml format:
    
    log_config.yaml:
    
@@ -580,7 +580,7 @@ Below are default config files that used by `logger-tt`. You can copy and modify
         both: ["%(message)s", "%(processName)s %(threadName)s %(message)s"]
     ```
 
-##2. Json format:
+## 2. Json format:
 
    log_config.json:
    

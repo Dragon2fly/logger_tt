@@ -11,8 +11,8 @@ Even multiprocessing logging becomes a breeze.
 * [Install](#install)
 * [Overview](#overview)
 * [Usage](#usage)
-  * [Overwrite the default log path](#1-overwrite-the-default-log-path)
-  * [Provide your config file](#2-provide-your-config-file)
+  * [Overwrite the default log path](#-1-overwrite-the-default-log-path)
+  * [Provide your config file](#-2-provide-your-config-file)
   * [Capture stdout](#3-capture-stdout)
   * [Exception logging](#4-exception-logging)
   * [try-except exception logging](#5-try-except-exception-logging)
@@ -133,14 +133,14 @@ Parameter with the same name passed in `setup_logging` function will override th
 
 
 
-###1. Overwrite the default log path:
+### 1. Overwrite the default log path:
    Instead of `./logs/logs.txt`, you can overwrite with your own as follows
     
    ```python
    setup_logging(log_path='new/path/to/your_log.txt')
    ```
 
-###2. Provide your config file:
+### 2. Provide your config file:
    You can config your own logger and handler by providing either `yaml` or `json` config file as follows:
     
    ```python

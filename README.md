@@ -6,6 +6,24 @@ Even multiprocessing logging becomes a breeze.
 [![PyPI version](https://badge.fury.io/py/logger-tt.svg)](https://pypi.org/project/logger-tt/)
 [![GitHub license](https://img.shields.io/github/license/Dragon2fly/logger_tt)](https://github.com/Dragon2fly/logger_tt/blob/master/LICENSE)
 
+## Table of contents
+
+* [Install](#install)
+* [Overview](#overview)
+* [Usage](#usage)
+  * [Overwrite the default log path](#1-overwrite-the-default-log-path)
+  * [Provide your config file](#2-provide-your-config-file)
+  * [Capture stdout](#3-capture-stdout)
+  * [Exception logging](#4-exception-logging)
+  * [try-except exception logging](#5-try-except-exception-logging)
+  * [Silent unwanted loggers](#6-silent-unwanted-loggers)
+  * [Logging in multiprocessing](#7-logging-in-multiprocessing)
+  * [Temporary disable logging](#8-temporary-disable-logging)
+* [Sample config](#sample-config)
+  * [YAML format](#1-yaml-format)
+  * [JSON format](#2-json-format)
+* [Changelog](#changelog)
+
 ## Install
 * From PYPI: `pip install logger_tt`
 * From Github: clone or download this repo then `python setup.py install` 
@@ -115,13 +133,15 @@ Parameter with the same name passed in `setup_logging` function will override th
 
 
 
-1. You can overwrite the default log path with your own as follows:
+###1. Overwrite the default log path:
+   Instead of `./logs/logs.txt`, you can overwrite with your own as follows
     
    ```python
    setup_logging(log_path='new/path/to/your_log.txt')
    ```
 
-2. You can config your own logger and handler by providing either `yaml` or `json` config file as follows:
+###2. Provide your config file:
+   You can config your own logger and handler by providing either `yaml` or `json` config file as follows:
     
    ```python
    setup_logging(config_path='path/to/.yaml_or_.json')
@@ -132,7 +152,7 @@ Parameter with the same name passed in `setup_logging` function will override th
 
    **Warning**: To process `.yaml` config file, you either need `pyyaml` or `ruamel.yaml` package installed. 
 
-3. Capture stdout:
+###3. Capture stdout:
 
    If you have an old code base with a lot of `print(msg)` or `sys.stdout.write(msg)` and 
    don't have access or time to refactor them into something like `logger.info(msg)`, 
@@ -204,7 +224,7 @@ Parameter with the same name passed in `setup_logging` function will override th
    But messages that contain blank line(s) and other characters will be fully logged.
    For example, `\nTo day is a beautiful day\n` will be logged as is.  
 
-4. Exception logging:
+###4. Exception logging:
    
    Consider the following error code snippet:
    
@@ -254,12 +274,12 @@ Parameter with the same name passed in `setup_logging` function will override th
    **Note**: look at the `print(f'Information...` line, 
    `logger-tt` print this error line different from normal python traceback!
    With normal traceback, multi-line python statement has its only first line printed out.
-   With `logger-tt`, full statement is grabbed for you.
+   With `logger-tt`, a full statement is grabbed for you.
    
    For each level in the stack, any object that appears in the error line is shown with its `readable representation`.
    This representation may not necessarily be `__repr__`. The choice between `__str__` and `__repr__` are as follows:
-   * `__str__` : `__str__` is present and the object class's `__repr__` is default with `<class name at Address>`.
-   * `__repr__`: `__str__` is present but the object class's `__repr__` is anything else, such as `ClassName(var=value)`.<br>
+   * `__str__` : `__str__` is present, and the object class's `__repr__` is default with `<class name at Address>`.
+   * `__repr__`: `__str__` is present, but the object class's `__repr__` is anything else, such as `ClassName(var=value)`.<br>
    Also, when `__str__` is missing, even if `__repr__` is `<class name at Address>`, it is used.
    
    Currently, if an object doesn't exist and is directly accessed, as `var` in this case, it will not be shown up.
@@ -320,8 +340,13 @@ Parameter with the same name passed in `setup_logging` function will override th
    ```
    
    Additional objects that not appear in the error line are prefixed with `=>`.
+
+   **Note**: from version 1.6, uncaught exception happened in child thread of a multithreading 
+    program will also be caught by `logger-tt` and logged normally. 
+   If you are using python 3.8+, the new `threading.excepthook` won't be called as the uncaught exception
+    has been handled by `logger-tt`. 
    
-5. `try-except` exception logging:
+###5. `try-except` exception logging:
    
    `exception context` logging also applies for `try-except` block.
     This means that if you call `logger.exception()` inside `except` block, 
@@ -371,15 +396,15 @@ Parameter with the same name passed in `setup_logging` function will override th
    will cause the first line of error report to be the message of exception. 
    In the case of the above example, it would be come `[2020-06-12 21:37:00] ERROR: division by zero`.
 
-6. Silent unwanted logger:
+###6. Silent unwanted loggers:
    
-   Third party modules also have logger and their messages are usually not related to your code.
+   Third party modules also have loggers, and their messages are usually not related to your code.
    A bunch of unwanted messages may hide the one that come from your own module. 
    To prevent that and also reduce log file size, we need to silent unwanted loggers.
    
    By config file, there are two ways to silent a logger:
    
-   * Create a new logger: in `logger` section of config file, 
+   * Create a new logger: in `logger` section of the config file, 
    add a new logger whose name is the same with the one you want to silent. 
    Set it level to `WARNING` or above. If you add `handlers`, you should also set `propagate` to `no` or `False`.
    Otherwise, the same message may be logged multiple times. Ex:
@@ -411,7 +436,7 @@ Parameter with the same name passed in `setup_logging` function will override th
    setup_logging(suppress=['urllib3', 'exchangelib'])
    ```
    
-7. Logging in multiprocessing:
+###7. Logging in multiprocessing:
     
     This is archived by using multiprocessing queues or a socket server.
     
@@ -476,7 +501,7 @@ Parameter with the same name passed in `setup_logging` function will override th
    Other options `True`, `spawn`, `forkserver` will use `socketHandler` by default.<br> 
    This is to prevent you `set_start_method` as `spawn` under linux and thus `queueHandler` won't work.
    
-8. Temporary disable logging:
+###8. Temporary disable logging:
 
     Some block of code contain critical information, such as password processing, that should not be logged.
     You can disable logging for that block with a `logging_disabled` context:
@@ -495,15 +520,15 @@ Parameter with the same name passed in `setup_logging` function will override th
     ```
 
 # Sample config:
-
-1. Yaml format:
+Below are default config files that used by `logger-tt`. You can copy and modify them as needed. 
+##1. Yaml format:
    
    log_config.yaml:
    
     ```yaml
     # This is an example of config file
     # In case of no config provided, log_config.json file will be loaded
-    # If you need a yaml file, install pyyaml package and copy this file
+    # If you need a yaml file, install pyyaml or ruamel.yaml package and copy this file
     version: 1
     disable_existing_loggers: False
     formatters:
@@ -555,7 +580,7 @@ Parameter with the same name passed in `setup_logging` function will override th
         both: ["%(message)s", "%(processName)s %(threadName)s %(message)s"]
     ```
 
-2. Json format:
+##2. Json format:
 
    log_config.json:
    
@@ -624,17 +649,22 @@ Parameter with the same name passed in `setup_logging` function will override th
    }
    ```
 
-# changelog
-## 1.5.3
-* Fixed: If an exception happened on the last line of multiline statement,
- many irrelevant lines below it were included in the stacktrace. This happened,
-  for line such as `a]`, `b}`, `c)`. Now the logger will just stop at these line.
-  
-* Additional to the above, now the logger will only include maximum 5 lines,
-  counted from the line of an exception. 
+# Changelog
+## 1.6.0
+* Fixed: If an exception happened on the multiline statement,
+ py3.6 and py3.7 return the last line while py3.9 returns the first line. 
+  Plus the `tokenize` module's behavior has changed, so it made grabbing the 
+  all the lines of the statement inconsistent and sometime buggy.
+  Now `logger-tt` only grabs maximum of 10 lines and grabs more accurately, 
+  more consistent between different python version.
   
 * Added support for `ruamel.yaml` package. If you already have it installed, 
   you don't need to install `pyyaml` to use `config.yaml` file 
+  
+* New feature: Uncaught exception happened in child thread of multi-threading 
+ program will also be logged. For python 3.8+, `threading.excepthook` will not run
+  as the exception is already caught by `logger-tt`.
+
 
 ## 1.5.2
 **Improved the pre-made logger named `logger_tt`** 

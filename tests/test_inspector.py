@@ -201,10 +201,10 @@ def test_get_full_statement():
     assert lines == ['y(1,\n', '  z),']
 
     lines = get_full_statement('full_statement.py', 7)
-    assert lines == ['z),']
+    assert lines == ['y(1,\n', '  z),']
 
     lines = get_full_statement('full_statement.py', 17)
-    assert lines == ['c:5}']
+    assert lines == ['txt = {a: 3,\n', '       b: 4,\n', '       c:5}']
 
     lines = get_full_statement('full_statement.py', 23)
-    assert lines == ['c]']
+    assert lines == ['my_list = [a,\n', '           b,\n', '           c]']

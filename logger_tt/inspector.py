@@ -102,17 +102,39 @@ def is_full_statement(*lines: str) -> bool:
         return True
 
 
-def get_full_statement(filename, lineno: int) -> list:
-    """
-    Get all lines of python file `filename` that makes up a full statement starting from `lineno`
+def get_statement_up(filename: str, lineno: int) -> list:
+    """The python interpreter return the last line of exception lines
+        This behavior is of python 3.6, 3.7
+        We have to go up to grab the full statement
 
-    :param filename: path to python source code file
-    :param lineno: line number at with the statement started
-    :return: list of maximum 5 lines that made up a python statement with indent striped,
+        Grab maximum 10 lines
+    """
+    startno = lineno
+    lines = []
+
+    while lineno >= max(0, startno - 9):
+        line = linecache.getline(filename, lineno)
+        lines.insert(0, line)
+
+        temp = ''.join(lines)
+        if not is_half_ended(temp):
+            break
+
+        lineno -= 1
+
+    return lines
+
+
+def get_statement_down(filename: str, lineno: int) -> list:
+    """The python interpreter return the first line of exception lines
+        This behavior is of python 3.9
+        We go down normally to grab the full statement
+
+        Grab maximum 10 lines
     """
     lines = []
     startno = lineno
-    while lineno <= startno + 5:
+    while lineno <= startno + 9:
         line = linecache.getline(filename, lineno)
         if not line:
             break
@@ -121,11 +143,25 @@ def get_full_statement(filename, lineno: int) -> list:
         if is_full_statement(*lines):
             break
 
-        temp = ''.join(lines) + line
-        if is_half_ended(temp):
-            break
-
         lineno += 1
+
+    return lines
+
+
+def get_full_statement(filename, lineno: int) -> list:
+    """
+    Get all lines of python file `filename` that makes up a full statement starting from `lineno`
+
+    :param filename: path to python source code file
+    :param lineno: line number at with the statement started
+    :return: list of maximum 5 lines that made up a python statement with indent striped,
+    """
+
+    line = linecache.getline(filename, lineno)
+    if is_half_ended(line):
+        lines = get_statement_up(filename, lineno)
+    else:
+        lines = get_statement_down(filename, lineno)
 
     lines[-1] = lines[-1].strip('\n')  # remove newline in last line
     indent = re.search(r'^(\s+)', lines[0])

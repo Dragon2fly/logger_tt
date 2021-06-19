@@ -19,6 +19,9 @@ Even multiprocessing logging becomes a breeze.
   * [Silent unwanted loggers](#6-silent-unwanted-loggers)
   * [Logging in multiprocessing](#7-logging-in-multiprocessing)
   * [Temporary disable logging](#8-temporary-disable-logging)
+  * [Limit traceback line length](#9-limit-traceback-lines-length)
+  * [Analyze `raise` exception line](#10-analyze-raise-exception-line)
+    
 * [Sample config](#sample-config)
   * [YAML format](#1-yaml-format)
   * [JSON format](#2-json-format)
@@ -120,7 +123,10 @@ setup_logging(config_path="", log_path="",
               capture_print=False, strict=False, guess_level=False,
               full_context=False,
               suppress_level_below=logging.WARNING,
-              use_multiprocessing=False)
+              use_multiprocessing=False,
+              limit_line_length=1000, 
+              analyze_raise_statement=False,
+              )
 ```
 
 This function also return a `LogConfig` object. 
@@ -438,64 +444,64 @@ Parameter with the same name passed in `setup_logging` function will override th
    
 ### 7. Logging in multiprocessing:
     
-    This is archived by using multiprocessing queues or a socket server.
-    
-    For linux, copy-on-write while forking carries over logger's information. 
-    So `multiprocess.Queue` is enough in this case. 
-    
-    For Windows, it is important that `setup_logging()` must be call out side of `if __name__ == '__main__':` guard block.
-    Because child processes run from scratch and re-import `__main__`, by re-executing `setup_logging()`, 
-    logger `SocketHandler` can be setup automatically. 
-    
-    This also means that the same config can work with both `multiprocessing.Process` and `multiprocessing.Pool` 
-    magically without user doing anything special.
-    
-    Below is a minimal example:
-    
-    ```python
-    import time
-    from random import randint
-    from multiprocessing import Process
+   This is archived by using multiprocessing queues or a socket server.
    
-    from logger_tt import setup_logging, logger
-    
+   For linux, copy-on-write while forking carries over logger's information. 
+   So `multiprocess.Queue` is enough in this case. 
    
-    setup_logging(use_multiprocessing=True)        # for Windows, this line must be outside of guard block
+   For Windows, it is important that `setup_logging()` must be call out side of `if __name__ == '__main__':` guard block.
+   Because child processes run from scratch and re-import `__main__`, by re-executing `setup_logging()`, 
+   logger `SocketHandler` can be setup automatically. 
+   
+   This also means that the same config can work with both `multiprocessing.Process` and `multiprocessing.Pool` 
+   magically without user doing anything special.
+   
+   Below is a minimal example:
     
-    
-    def worker(arg):
-        logger.info(f'child process {arg}: started')
-        time.sleep(randint(1,10))                  # imitate time consuming process
-        logger.info(f'child process {arg}: stopped')
-    
-    
-    if __name__ == '__main__':
-        all_processes = []
-        logger.info('Parent process is ready to spawn child')
-        for i in range(3):
-            p = Process(target=worker, args=(i,))
-            all_processes.append(p)
-            p.daemon = True
-            p.start()
-    
-        for p in all_processes:
-            p.join()
-    ```
-    
-    The content of `log.txt` should be similar to below:
-    
-    ```text
-    [2020-10-28 20:39:14] [root:129 DEBUG] _________________New log started__________________
-    [2020-10-28 20:39:17] [root:130 DEBUG] Log config file: D:\my_project\log_config.json
-    [2020-10-28 20:39:17] [root:131 DEBUG] Logging server started!
-    [2020-10-28 20:39:22] [__main__:28 INFO] Parent process is ready to spawn child
-    [2020-10-28 20:39:22] [__mp_main__:16 INFO] Process-3 child process 2: started
-    [2020-10-28 20:39:22] [__mp_main__:16 INFO] Process-2 child process 1: started
-    [2020-10-28 20:39:22] [__mp_main__:16 INFO] Process-1 child process 0: started
-    [2020-10-28 20:39:23] [__mp_main__:18 INFO] Process-2 child process 1: stopped
-    [2020-10-28 20:39:23] [__mp_main__:18 INFO] Process-3 child process 2: stopped
-    [2020-10-28 20:39:24] [__mp_main__:18 INFO] Process-1 child process 0: stopped
-    ```
+```python
+import time
+from random import randint
+from multiprocessing import Process
+
+from logger_tt import setup_logging, logger
+
+
+setup_logging(use_multiprocessing=True)        # for Windows, this line must be outside of guard block
+
+
+def worker(arg):
+    logger.info(f'child process {arg}: started')
+    time.sleep(randint(1,10))                  # imitate time consuming process
+    logger.info(f'child process {arg}: stopped')
+
+
+if __name__ == '__main__':
+    all_processes = []
+    logger.info('Parent process is ready to spawn child')
+    for i in range(3):
+        p = Process(target=worker, args=(i,))
+        all_processes.append(p)
+        p.daemon = True
+        p.start()
+
+    for p in all_processes:
+        p.join()
+```
+
+The content of `log.txt` should be similar to below:
+
+```text
+[2020-10-28 20:39:14] [root:129 DEBUG] _________________New log started__________________
+[2020-10-28 20:39:17] [root:130 DEBUG] Log config file: D:\my_project\log_config.json
+[2020-10-28 20:39:17] [root:131 DEBUG] Logging server started!
+[2020-10-28 20:39:22] [__main__:28 INFO] Parent process is ready to spawn child
+[2020-10-28 20:39:22] [__mp_main__:16 INFO] Process-3 child process 2: started
+[2020-10-28 20:39:22] [__mp_main__:16 INFO] Process-2 child process 1: started
+[2020-10-28 20:39:22] [__mp_main__:16 INFO] Process-1 child process 0: started
+[2020-10-28 20:39:23] [__mp_main__:18 INFO] Process-2 child process 1: stopped
+[2020-10-28 20:39:23] [__mp_main__:18 INFO] Process-3 child process 2: stopped
+[2020-10-28 20:39:24] [__mp_main__:18 INFO] Process-1 child process 0: stopped
+```
 
    **Note**: Under linux, to use `queueHandler`, you must pass `use_multiprocessing="fork"` to `setup_logging`.<br>
    Other options `True`, `spawn`, `forkserver` will use `socketHandler` by default.<br> 
@@ -503,21 +509,108 @@ Parameter with the same name passed in `setup_logging` function will override th
    
 ### 8. Temporary disable logging:
 
-    Some block of code contain critical information, such as password processing, that should not be logged.
-    You can disable logging for that block with a `logging_disabled` context:
+   Some block of code contain critical information, such as password processing, that should not be logged.
+   You can disable logging for that block with a `logging_disabled` context:
   
-    ```python
-    from logger_tt import logging_disabled, getLogger
+```python
+from logger_tt import logging_disabled, getLogger
+
+logger = getLogger(__name__) 
+
+
+logger.debug('Begin a secret process')
+with logging_disabled():
+    logger.info('This will not appear in any log')
+
+logger.debug('Finish')
+```
+
+### 9. Limit traceback line's length:
+   Sometimes the variable on the exception line can hold enormous amount of data, 
+   such as content of some huge json file or html. In this case, printing out the whole content
+   of the variable is quite point less and hinders debugging process as it hides away exception line.
     
-    logger = getLogger(__name__) 
-   
-    
-    logger.debug('Begin a secret process')
-    with logging_disabled():
-        logger.info('This will not appear in any log')
-    
-    logger.debug('Finish')
-    ```
+   So we should limit the character to be printed out in each line of the traceback.
+   And we can do it as simple as follow:
+
+    setup_logging(limit_line_length=1000)
+
+   The default limit is 1000 characters. All left characters will be replaced with `...`. 
+   `limit_line_length=0` means no limit at all, prints the content of variable as is.  
+
+   **Note**: if you input a `float`, it will be round down to nearest `int`. 
+   A negative input is treated as inputting `0`.
+
+   For demonstration purpose, the example below will limit to `100` characters:
+   ```python
+from logger_tt import setup_logging
+
+setup_logging(limit_line_length=100)
+
+def will_fail():
+    loren_ipsum = "On the other hand, we denounce with righteous indignation and dislike men who are so beguiled and " \
+                  "demoralized by the charms of pleasure of the moment, so blinded by desire, that they cannot " \
+                  "foresee the pain and trouble that are bound to ensue; and equal blame belongs to those who fail in " \
+                  "their duty through weakness of will, which is the same as saying through shrinking from toil and " \
+                  "pain. These cases are perfectly simple and easy to distinguish. In a free hour, when our power of " \
+                  "choice is untrammelled and when nothing prevents our being able to do what we like best, " \
+                  "every pleasure is to be welcomed and every pain avoided. But in certain circumstances and owing to " \
+                  "the claims of duty or the obligations of business it will frequently occur that pleasures have to " \
+                  "be repudiated and annoyances accepted. The wise man therefore always holds in these matters to " \
+                  "this principle of selection: he rejects pleasures to secure other greater pleasures, or else he " \
+                  "endures pains to avoid worse pains. "
+
+    print(f'Below is the {random} text used as a standard to test font: \n{loren_ipsum}')
+
+if __name__ == '__main__':
+    will_fail()
+   ```
+
+It will output the follow traceback. Pay attention to the `loren_ipsum` variable.
+```python
+[2021-06-19 17:40:39] ERROR: Uncaught exception:
+Traceback (most recent call last):
+  File "D:\my_project\long_line.py", line 21, in <module>
+    will_fail()
+
+  File "D:\my_project\long_line.py", line 18, in will_fail
+    print(f'Below is the {random} text used as a standard to test font: \n{loren_ipsum}')
+     |-> loren_ipsum = 'On the other hand, we denounce with righteous indignation and dislike men wh... (922 characters more)
+NameError: name 'random' is not defined
+```
+
+### 10. Analyze `raise` exception line:
+   If the code explicitly `raise` an exception, in most cases, 
+   the variables on the line are substituted and printed out at the end of traceback.
+   With `logger-tt` analyzing the `raise` statement, these variables are printed again too.
+
+```python
+[2021-06-19 18:15:01] ERROR: Uncaught exception:
+Traceback (most recent call last):
+  File "D:\my_project\module.py", line 9, in <module>
+    raise RuntimeError(f'Too much laughing with a={a} and b={b}')
+     |-> a = 'haha'
+     |-> b = 'hihi'
+RuntimeError: Too much laughing with a=haha and b=hihi
+```
+
+   The duplication is unnecessary, so from version `1.6.1`, `raise` exception line will not be analyzed as default.
+   This resulted in a much cleaner log:
+
+```python
+[2021-06-19 18:15:30] ERROR: Uncaught exception:
+Traceback (most recent call last):
+  File "D:\my_project\module.py", line 9, in <module>
+    raise RuntimeError(f'Too much laughing with a={a} and b={b}')
+RuntimeError: Too much laughing with a=haha and b=hihi
+```
+
+   If the `raise` exception line in turn, raise another exception, and you want to analyze it,
+   you could turn it back on as below:
+
+    setup_logging(analyze_raise_statement=True)
+
+
 
 # Sample config:
 Below are default config files that used by `logger-tt`. You can copy and modify them as needed. 
@@ -573,6 +666,8 @@ Below are default config files that used by `logger-tt`. You can copy and modify
       guess_level: False
       full_context: 0
       use_multiprocessing: False
+      limit_line_length: 1000
+      analyze_raise_statement: False
       default_logger_formats:
         normal: ["%(name)s", "%(filename)s"]
         thread: ["%(message)s", "%(threadName)s %(message)s"]
@@ -639,6 +734,8 @@ Below are default config files that used by `logger-tt`. You can copy and modify
        "guess_level": false,
        "full_context": 0,
        "use_multiprocessing": false,
+       "limit_line_length": 1000,
+       "analyze_raise_statement": false,
        "default_logger_formats": {
           "normal": ["%(name)s", "%(filename)s"],
           "thread": ["%(message)s", "%(threadName)s %(message)s"],
@@ -650,6 +747,15 @@ Below are default config files that used by `logger-tt`. You can copy and modify
    ```
 
 # Changelog
+## 1.6.1
+* Added `limit_line_length` parameter: log only maximum `n` characters for each traceback line. 
+  This prevents dumping the whole huge content of the variable into the log. `n=1000` by default.
+  
+* Added `analyze_raise_statement` parameter: 
+  `logger-tt` no longer analyze the `raise` statement by default. 
+  This avoids logging value of variables on the `raise` statement two time, especially when the content 
+  of these variables are huge.
+
 ## 1.6.0
 * Fixed: If an exception happened on the multiline statement,
  py3.6 and py3.7 return the last line while py3.9 returns the first line. 

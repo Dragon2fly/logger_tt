@@ -15,7 +15,7 @@ def will_fail():
                   "this principle of selection: he rejects pleasures to secure other greater pleasures, or else he " \
                   "endures pains to avoid worse pains. "
 
-    raise RuntimeError(f'Below is the random text used as a standard to text font: \n{loren_ipsum}')
+    raise RuntimeError(f'Below is the random text used as a standard to test font: \n{loren_ipsum}')
 
 
 if __name__ == '__main__':

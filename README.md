@@ -618,133 +618,133 @@ Below are default config files that used by `logger-tt`. You can copy and modify
    
    log_config.yaml:
    
-    ```yaml
-    # This is an example of config file
-    # In case of no config provided, log_config.json file will be loaded
-    # If you need a yaml file, install pyyaml or ruamel.yaml package and copy this file
-    version: 1
-    disable_existing_loggers: False
-    formatters:
-      simple:
-        format: "[%(asctime)s] [%(name)s:%(lineno)d %(levelname)s] %(message)s"
-        datefmt: "%Y-%m-%d %H:%M:%S"
-      brief:
-        format: "[%(asctime)s] %(levelname)s: %(message)s"
-        datefmt: "%Y-%m-%d %H:%M:%S"
-    
-    handlers:
-      console:
-        class: logging.StreamHandler
-        level: INFO
-        formatter: brief
-        stream: ext://sys.stdout
-    
-      error_file_handler:
-        class: logging.handlers.TimedRotatingFileHandler
-        level: DEBUG
-        formatter: simple
-        filename: logs/log.txt
-        backupCount: 15
-        encoding: utf8
-        when: midnight
-    
-    loggers:
-      urllib3:
-        level: WARNING
-        handlers: [console, error_file_handler]
-        propagate: no
-    
-    root:
-      level: DEBUG
-      handlers: [console, error_file_handler]
-    
-    logger_tt:
-      suppress: ["exchangelib"]
-      suppress_level_below: "WARNING"
-      capture_print: False
-      strict: False
-      guess_level: False
-      full_context: 0
-      use_multiprocessing: False
-      limit_line_length: 1000
-      analyze_raise_statement: False
-      default_logger_formats:
-        normal: ["%(name)s", "%(filename)s"]
-        thread: ["%(message)s", "%(threadName)s %(message)s"]
-        multiprocess: ["%(message)s", "%(processName)s %(message)s"]
-        both: ["%(message)s", "%(processName)s %(threadName)s %(message)s"]
-    ```
+```yaml
+# This is an example of config file
+# In case of no config provided, log_config.json file will be loaded
+# If you need a yaml file, install pyyaml or ruamel.yaml package and copy this file
+version: 1
+disable_existing_loggers: False
+formatters:
+  simple:
+    format: "[%(asctime)s] [%(name)s:%(lineno)d %(levelname)s] %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+  brief:
+    format: "[%(asctime)s] %(levelname)s: %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: brief
+    stream: ext://sys.stdout
+
+  error_file_handler:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: DEBUG
+    formatter: simple
+    filename: logs/log.txt
+    backupCount: 15
+    encoding: utf8
+    when: midnight
+
+loggers:
+  urllib3:
+    level: WARNING
+    handlers: [console, error_file_handler]
+    propagate: no
+
+root:
+  level: DEBUG
+  handlers: [console, error_file_handler]
+
+logger_tt:
+  suppress: ["exchangelib"]
+  suppress_level_below: "WARNING"
+  capture_print: False
+  strict: False
+  guess_level: False
+  full_context: 0
+  use_multiprocessing: False
+  limit_line_length: 1000
+  analyze_raise_statement: False
+  default_logger_formats:
+    normal: ["%(name)s", "%(filename)s"]
+    thread: ["%(message)s", "%(threadName)s %(message)s"]
+    multiprocess: ["%(message)s", "%(processName)s %(message)s"]
+    both: ["%(message)s", "%(processName)s %(threadName)s %(message)s"]
+```
 
 ## 2. Json format:
 
    log_config.json:
    
-   ```json
-   {
-     "version": 1,
-     "disable_existing_loggers": false,
-     "formatters": {
-       "simple": {
-         "format": "[%(asctime)s] [%(name)s:%(lineno)d %(levelname)s] %(message)s",
-         "datefmt": "%Y-%m-%d %H:%M:%S"
-       },
-       "brief": {
-         "format": "[%(asctime)s] %(levelname)s: %(message)s",
-         "datefmt": "%Y-%m-%d %H:%M:%S"
-       }
-     },
-   
-     "handlers": {
-       "console": {
-         "class": "logging.StreamHandler",
-         "level": "INFO",
-         "formatter": "brief",
-         "stream": "ext://sys.stdout"
-       },
-   
-       "error_file_handler": {
-         "class": "logging.handlers.TimedRotatingFileHandler",
-         "level": "DEBUG",
-         "formatter": "simple",
-         "filename": "logs/log.txt",
-         "backupCount": 15,
-         "encoding": "utf8",
-         "when": "midnight"
-       }
-     },
-   
-     "loggers": {
-       "urllib3": {
-         "level": "ERROR",
-         "handlers": ["console", "error_file_handler"],
-         "propagate": false
-       }
-     },
-   
-     "root": {
-       "level": "DEBUG",
-       "handlers": ["console", "error_file_handler"]
-     },
-   
-     "logger_tt": {
-       "suppress": ["exchangelib"],
-       "suppress_level_below": "WARNING",
-       "capture_print": false,
-       "strict": false,
-       "guess_level": false,
-       "full_context": 0,
-       "use_multiprocessing": false,
-       "limit_line_length": 1000,
-       "analyze_raise_statement": false,
-       "default_logger_formats": {
-          "normal": ["%(name)s", "%(filename)s"],
-          "thread": ["%(message)s", "%(threadName)s %(message)s"],
-          "multiprocess": ["%(message)s", "%(processName)s %(message)s"],
-          "both": ["%(message)s", "%(processName)s %(threadName)s %(message)s"]
-       }
-     }
+```json
+{
+ "version": 1,
+ "disable_existing_loggers": false,
+ "formatters": {
+   "simple": {
+     "format": "[%(asctime)s] [%(name)s:%(lineno)d %(levelname)s] %(message)s",
+     "datefmt": "%Y-%m-%d %H:%M:%S"
+   },
+   "brief": {
+     "format": "[%(asctime)s] %(levelname)s: %(message)s",
+     "datefmt": "%Y-%m-%d %H:%M:%S"
    }
-   ```
+ },
+
+ "handlers": {
+   "console": {
+     "class": "logging.StreamHandler",
+     "level": "INFO",
+     "formatter": "brief",
+     "stream": "ext://sys.stdout"
+   },
+
+   "error_file_handler": {
+     "class": "logging.handlers.TimedRotatingFileHandler",
+     "level": "DEBUG",
+     "formatter": "simple",
+     "filename": "logs/log.txt",
+     "backupCount": 15,
+     "encoding": "utf8",
+     "when": "midnight"
+   }
+ },
+
+ "loggers": {
+   "urllib3": {
+     "level": "ERROR",
+     "handlers": ["console", "error_file_handler"],
+     "propagate": false
+   }
+ },
+
+ "root": {
+   "level": "DEBUG",
+   "handlers": ["console", "error_file_handler"]
+ },
+
+ "logger_tt": {
+   "suppress": ["exchangelib"],
+   "suppress_level_below": "WARNING",
+   "capture_print": false,
+   "strict": false,
+   "guess_level": false,
+   "full_context": 0,
+   "use_multiprocessing": false,
+   "limit_line_length": 1000,
+   "analyze_raise_statement": false,
+   "default_logger_formats": {
+      "normal": ["%(name)s", "%(filename)s"],
+      "thread": ["%(message)s", "%(threadName)s %(message)s"],
+      "multiprocess": ["%(message)s", "%(processName)s %(message)s"],
+      "both": ["%(message)s", "%(processName)s %(threadName)s %(message)s"]
+   }
+ }
+}
+```
 
 # Changelog
 ## 1.6.1

@@ -213,7 +213,6 @@ def parse_line(identifiers, frame, outer) -> list:
     local_var = frame.f_locals
 
     txt = []
-    print(identifiers)
     for i in identifiers:
         if i in seen or i.endswith('.'):
             continue

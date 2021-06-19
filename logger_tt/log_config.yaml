@@ -45,6 +45,8 @@ logger_tt:
   guess_level: False
   full_context: 0
   use_multiprocessing: False
+  limit_line_length: 1000
+  analyze_raise_statement: False
   default_logger_formats:
     normal: ["%(name)s", "%(filename)s"]
     thread: ["%(message)s", "%(threadName)s %(message)s"]

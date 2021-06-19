@@ -23,9 +23,11 @@ def handle_exception(exc_type, exc_value, exc_traceback, thread_name=''):
         return
 
     full_context = internal_config.full_context
+    limit_length = internal_config.limit_line_length
+    analyze_raise = internal_config.analyze_raise_statement
 
     # Root logger will log all other uncaught exceptions
-    txt = analyze_frame(exc_traceback, full_context)
+    txt = analyze_frame(exc_traceback, full_context, limit_length, analyze_raise)
 
     # Exception in a child thread?
     if thread_name:
@@ -107,7 +109,9 @@ def merge_config(from_file: dict, from_func: dict) -> dict:
     """
     defaults = dict(capture_print=False, strict=False, guess_level=False,
                     full_context=0, suppress=None,
-                    suppress_level_below=logging.WARNING, use_multiprocessing=False)
+                    suppress_level_below=logging.WARNING, use_multiprocessing=False,
+                    limit_line_length=1000, analyze_raise_statement=False,
+                    )
     merged = {}
     for key, val in defaults.items():
         merged[key] = from_func.get(key, from_file.get(key, val))
@@ -143,6 +147,8 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
         :key use_multiprocessing : bool or str, set this to True if your code use multiprocessing.
                                     This flag switches the queue used for logging from
                                     queue.Queue to multiprocessing.Queue . This option can only be used here.
+        :key limit_line_length   : int, define how long should one log line be. 0: unlimited; n: n character
+        :key analyze_raise_statement: bool, should the variables in `raise` exception line be shown or not.
     """
     if internal_config.initialized:
         logger.warning('Re-initializing logger_tt. "setup_logging()" should only be called one.')
@@ -199,7 +205,9 @@ class ExceptionLogger(logging.Logger):
         if exc_info:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             full_context = internal_config.full_context
-            txt = analyze_frame(exc_traceback, full_context)
+            limit_length = internal_config.limit_line_length
+            analyze_raise = internal_config.analyze_raise_statement
+            txt = analyze_frame(exc_traceback, full_context, limit_length, analyze_raise)
             logging.error(f'{msg}\n'
                           f"Traceback (most recent call last):\n"
                           f"{txt}",

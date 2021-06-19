@@ -37,6 +37,8 @@ class LogConfig:
         self.strict = False
         self.guess_level = False
         self.suppress_level_below = logging.WARNING
+        self.limit_line_length = 1000
+        self.analyze_raise_statement = False
 
         self.original_stdout = sys.stdout
 
@@ -52,11 +54,14 @@ class LogConfig:
 
     def from_dict(self, odict: dict):
         # store basic settings
-        for key in ['full_context', 'strict', 'guess_level']:
+        for key in ['full_context', 'strict', 'guess_level', 'analyze_raise_statement']:
             setattr(self, key, odict[key])
 
         # set capture_print
         self.capture_print = odict['capture_print']
+
+        # set limit_line_length
+        self.limit_line_length = max(0, int(odict['limit_line_length']))
 
         # suppress other logger
         level = odict.get('suppress_level_below', 'WARNING')

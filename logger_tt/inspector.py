@@ -189,7 +189,76 @@ def get_traceback_depth(trace_back) -> int:
     return count
 
 
-def analyze_frame(trace_back, full_context: int = False) -> str:
+def get_basic_exception_info(summary) -> tuple:
+    """Return a normal 2 lines of of an exception and a full python statement in case of multiline"""
+
+    line = summary.line
+    if not is_full_statement(summary.line):
+        line = get_full_statement(summary.filename, summary.lineno)
+        line = '    '.join(line)
+
+    txt = [f'  File "{summary.filename}", line {summary.lineno}, in {summary.name}',
+           f'    {line}']
+    return txt, line
+
+
+def parse_line(identifiers, frame, outer) -> list:
+    """List variables appear on the exception line and their values"""
+    seen = set()
+
+    bullet_1 = '|->'
+    multi_line_indent1 = 8 + len(bullet_1)
+
+    global_var = frame.f_globals
+    local_var = frame.f_locals
+
+    txt = []
+    print(identifiers)
+    for i in identifiers:
+        if i in seen or i.endswith('.'):
+            continue
+
+        seen.add(i)
+        spaces = multi_line_indent1 + len(i)
+        if i in local_var:
+            value = get_repr(local_var[i], spaces)
+            txt.append(f'     {bullet_1} {i} = {value}')
+        elif i in global_var:
+            spaces += len(outer)
+            value = get_repr(global_var[i], spaces)
+            txt.append(f'     {bullet_1} {outer}{i} = {value}')
+        elif '.' in i:
+            # class attribute access
+            spaces += len(outer)
+            instance = i.split('.')[0]
+            obj = local_var.get(instance, global_var.get(instance))
+            attribute = get_recur_attr(obj, i[len(instance) + 1:])
+            value = get_repr(attribute, spaces)
+            scope = outer if instance in global_var else ''
+            txt.append(f'     {bullet_1} {scope}{i} = {value}')
+        else:
+            # reserved Keyword or non-identifier, eg. word inside the string
+            pass
+
+    return txt
+
+
+def parse_full_context(identifiers, frame) -> list:
+    """List variables within the scope of the exception line and their values"""
+    bullet_2 = '=>'
+    multi_line_indent2 = 8 + len(bullet_2)
+
+    local_var = frame.f_locals
+    other_local_var = set(local_var) - set(identifiers)
+    txt = []
+    if other_local_var:
+        spaces = multi_line_indent2
+        txt = [f'     {bullet_2} {k} = {get_repr(v, spaces + len(k))}'
+               for k, v in local_var.items() if k in other_local_var]
+    return txt
+
+
+def analyze_frame(trace_back, full_context: int, limit_line_length: int, analyze_raise_statement: bool) -> str:
     """
     Read out variables' content surrounding the error line of code
 
@@ -198,32 +267,21 @@ def analyze_frame(trace_back, full_context: int = False) -> str:
             full_context == 0: export only variables that appear on the error line
             full_context == 1: export variables within the error function's scope
             full_context >= 2: export variables along the function's call stack up to `full_context` level
+    :param limit_line_length: maximum character on one line of traceback, 0 for unlimited
+    :param analyze_raise_statement: should the variables in `raise` exception line be shown or not
     :return: string of analyzed frame
     """
     result = []
     full_context = max(0, int(full_context))
-    # todo: add color
-    bullet_1 = '|->'
-    bullet_2 = '=>'
-    multi_line_indent1 = 8 + len(bullet_1)
-    multi_line_indent2 = 8 + len(bullet_2)
     stack_depth = get_traceback_depth(trace_back)
+    # todo: add color
 
     with logging_disabled():
         for idx, obj in enumerate(walk_tb(trace_back)):
             frame, _ = obj
 
-            global_var = frame.f_globals
-            local_var = frame.f_locals
-
             summary = StackSummary.extract([obj], capture_locals=True)[0]
-            line = summary.line
-            if not is_full_statement(summary.line):
-                line = get_full_statement(summary.filename, summary.lineno)
-                line = '    '.join(line)
-
-            txt = [f'  File "{summary.filename}", line {summary.lineno}, in {summary.name}',
-                   f'    {line}']
+            txt, line = get_basic_exception_info(summary)
 
             # todo: dump all level to different file?
             parse_level = max(full_context - 1, 0)
@@ -235,41 +293,22 @@ def analyze_frame(trace_back, full_context: int = False) -> str:
 
             # get value of variables on the error line
             identifiers = ID_PATTERN.findall(line)
-            seen = set()
-            outer = "(outer) " if idx else ""  # ground level variables are not outer for sure
-            for i in identifiers:
-                if i in seen or i.endswith('.'):
-                    continue
-
-                seen.add(i)
-                spaces = multi_line_indent1 + len(i)
-                if i in local_var:
-                    value = get_repr(local_var[i], spaces)
-                    txt.append(f'     {bullet_1} {i} = {value}')
-                elif i in global_var:
-                    spaces += len(outer)
-                    value = get_repr(global_var[i], spaces)
-                    txt.append(f'     {bullet_1} {outer}{i} = {value}')
-                elif '.' in i:
-                    # class attribute access
-                    spaces += len(outer)
-                    instance = i.split('.')[0]
-                    obj = local_var.get(instance, global_var.get(instance))
-                    attribute = get_recur_attr(obj, i[len(instance) + 1:])
-                    value = get_repr(attribute, spaces)
-                    scope = outer if instance in global_var else ''
-                    txt.append(f'     {bullet_1} {scope}{i} = {value}')
-                else:
-                    # reserved Keyword or non-identifier, eg. word inside the string
-                    pass
+            if analyze_raise_statement or not line.strip().startswith('raise '):
+                outer = "(outer) " if idx else ""  # ground level variables are not outer for sure
+                new_info = parse_line(identifiers, frame, outer)
+                txt.extend(new_info)
 
             # get value of other variables within local scope
             if full_context:
-                other_local_var = set(local_var) - set(identifiers)
-                if other_local_var:
-                    spaces = multi_line_indent2
-                    txt.extend([f'     {bullet_2} {k} = {get_repr(v, spaces + len(k))}'
-                                for k, v in local_var.items() if k in other_local_var])
+                new_info = parse_full_context(identifiers, frame)
+                txt.extend(new_info)
+
+            # limit the length of the line
+            if limit_line_length > 0:
+                for i, line in enumerate(txt):
+                    if len(line) > limit_line_length:
+                        char_left = len(line) - limit_line_length
+                        txt[i] = line[:limit_line_length] + f'... ({char_left} characters more)'
 
             txt.append('')
             result.append('\n'.join(txt))

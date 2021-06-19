@@ -7,7 +7,6 @@ import pytest
 
 from logger_tt.inspector import get_recur_attr, get_repr, is_full_statement, get_full_statement, MEM_PATTERN
 
-
 __author__ = "Duc Tin"
 log = Path.cwd() / 'logs/log.txt'
 
@@ -208,3 +207,30 @@ def test_get_full_statement():
 
     lines = get_full_statement('full_statement.py', 23)
     assert lines == ['my_list = [a,\n', '           b,\n', '           c]']
+
+
+@pytest.mark.parametrize('limit, result', [(-1, "or else he endures pains to avoid worse pains. '"),
+                                           (0, "or else he endures pains to avoid worse pains. '"),
+                                           (100, "|-> loren_ipsum = 'On the other hand, we denounce with righteous "
+                                                 "indignation and dislike men wh... (922 characters more)"),
+                                           ])
+def test_long_line(limit, result):
+    cmd = [sys.executable, f"exception_raise_long_line.py", str(limit), "1"]
+    run(cmd, stdout=PIPE, universal_newlines=True)
+    data = log.read_text()
+
+    assert result in data
+
+
+@pytest.mark.parametrize('analyze, result', [(False, "|-> loren_ipsum"),
+                                             (True, "|-> loren_ipsum"),
+                                             ])
+def test_analyze_raise_statement(analyze, result):
+    cmd = [sys.executable, f"exception_raise_long_line.py", "0", str(int(analyze))]
+    run(cmd, stdout=PIPE, universal_newlines=True)
+    data = log.read_text()
+
+    if analyze:
+        assert result in data
+    else:
+        assert result not in data

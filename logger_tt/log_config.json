@@ -52,6 +52,8 @@
     "guess_level": false,
     "full_context": 0,
     "use_multiprocessing": false,
+    "limit_line_length": 1000,
+    "analyze_raise_statement": false,
     "default_logger_formats": {
       "normal": ["%(name)s", "%(filename)s"],
       "thread": ["%(message)s", "%(threadName)s %(message)s"],

@@ -2,6 +2,7 @@ import re
 import sys
 
 import pytest
+from ruamel.yaml import YAML
 from subprocess import run, PIPE
 from pathlib import Path
 
@@ -61,3 +62,21 @@ def test_multiprocessing_threading():
     assert 'Parent process is ready to spawn child' in data
     expect = re.findall(r'Process-\d+ Thread-\d+.*? thread running from process', data)
     assert len(expect) == 10
+
+
+def test_multiprocessing_rollover():
+    # reduce the rollover interval to 5 seconds
+    yaml = YAML(typ='safe')
+    config_file = Path("../logger_tt/log_config.yaml")
+    log_config = yaml.load(config_file.read_text())
+    log_config['handlers']['error_file_handler']['when'] = 's'
+    log_config['handlers']['error_file_handler']['interval'] = 5
+
+    # write the config out
+    test_config = Path("multiprocessing_issue3_config.yaml")
+    yaml.dump(data=log_config, stream=test_config)
+
+    # test it
+    cmd = [sys.executable, "multiprocessing_issue3.py", "3"]
+    result = run(cmd, stderr=PIPE, universal_newlines=True)
+    assert "PermissionError: [WinError 32] The process cannot access the file" not in result.stderr

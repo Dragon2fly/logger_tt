@@ -1,0 +1,34 @@
+disable_existing_loggers: false
+formatters:
+  brief: {datefmt: '%Y-%m-%d %H:%M:%S', format: '[%(asctime)s] %(levelname)s: %(message)s'}
+  simple: {datefmt: '%Y-%m-%d %H:%M:%S', format: '[%(asctime)s] [%(name)s:%(lineno)d
+      %(levelname)s] %(message)s'}
+handlers:
+  console: {class: logging.StreamHandler, formatter: brief, level: INFO, stream: 'ext://sys.stdout'}
+  error_file_handler: {backupCount: 15, class: logging.handlers.TimedRotatingFileHandler,
+    delay: false, encoding: utf8, filename: logs/log.txt, formatter: simple, interval: 5,
+    level: DEBUG, when: s}
+logger_tt:
+  analyze_raise_statement: false
+  capture_print: false
+  default_logger_formats:
+    both: ['%(message)s', '%(processName)s %(threadName)s %(message)s']
+    multiprocess: ['%(message)s', '%(processName)s %(message)s']
+    normal: ['%(name)s', '%(filename)s']
+    thread: ['%(message)s', '%(threadName)s %(message)s']
+  full_context: 0
+  guess_level: false
+  limit_line_length: 1000
+  strict: false
+  suppress: [exchangelib]
+  suppress_level_below: WARNING
+  use_multiprocessing: false
+loggers:
+  urllib3:
+    handlers: [console, error_file_handler]
+    level: WARNING
+    propagate: no
+root:
+  handlers: [console, error_file_handler]
+  level: DEBUG
+version: 1

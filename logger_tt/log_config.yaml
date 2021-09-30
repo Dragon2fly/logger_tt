@@ -26,6 +26,7 @@ handlers:
     backupCount: 15
     encoding: utf8
     when: midnight
+    delay: True
 
 loggers:
   urllib3:

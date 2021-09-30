@@ -27,7 +27,8 @@
       "filename": "logs/log.txt",
       "backupCount": 15,
       "encoding": "utf8",
-      "when": "midnight"
+      "when": "midnight",
+      "delay": true
     }
   },
 

@@ -163,8 +163,13 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
 
     # load config from file
     config = load_from_file(cfgpath)
-    ensure_path(config, log_path)
     logger_tt_cfg = config.pop('logger_tt', {})
+    if current_process().name == 'MainProcess':
+        ensure_path(config, log_path)   # create log path if not exist
+    else:
+        # child process of Spawn-method
+        del config['loggers']           # remove all loggers as they will not be used
+        del config['root']['handlers']  # remove all handlers of the root logger as a socket handler will be added later
 
     # initialize
     for name in logging.root.manager.loggerDict:

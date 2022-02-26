@@ -80,3 +80,22 @@ def test_multiprocessing_rollover():
     cmd = [sys.executable, "multiprocessing_issue3.py", "3"]
     result = run(cmd, stderr=PIPE, universal_newlines=True)
     assert "PermissionError: [WinError 32] The process cannot access the file" not in result.stderr
+
+
+def test_multiprocessing_issue5():
+    """child processes also create a log path which is unnecessary"""
+
+    # test it
+    cmd = [sys.executable, "multiprocessing_issue5.py", "3"]
+    result = run(cmd, stdout=PIPE, universal_newlines=True)
+    log_parent = log.parent
+    sub_folders = [x for x in log_parent.iterdir() if x.is_dir()]
+    number_of_path = len(sub_folders)
+
+    # issue 5
+    assert number_of_path == 1, sub_folders
+
+    # to be sure
+    logfile = sub_folders[0] / 'info.log'
+    assert logfile.exists()
+    assert 'Test for issue 5' in logfile.read_text()

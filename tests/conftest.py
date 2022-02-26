@@ -1,4 +1,7 @@
+import shutil
+import time
 from pathlib import Path
+
 
 __author__ = "Duc Tin"
 
@@ -9,10 +12,7 @@ log = Path.cwd() / 'logs/log.txt'
 def remove_log():
     log_folder = log.parent
     if log_folder.exists():
-        for file in log_folder.iterdir():
-            file.unlink()
-        # else:
-        #     log_folder.unlink()
+        shutil.rmtree(log_folder)
 
 
 def pytest_runtest_setup(item):

@@ -163,7 +163,6 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
 
     # load config from file
     config = load_from_file(cfgpath)
-    ensure_path(config, log_path)
     logger_tt_cfg = config.pop('logger_tt', {})
 
     # initialize
@@ -176,6 +175,7 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
     if current_process().name == 'MainProcess':
         logging.debug('New log started'.center(50, '_'))
         logging.debug(f'Log config file: {cfgpath}')
+        ensure_path(config, log_path)
 
     # set internal config
     iconfig = merge_config(logger_tt_cfg, logger_tt_config)

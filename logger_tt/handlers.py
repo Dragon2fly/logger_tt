@@ -1,16 +1,18 @@
 import logging
 import time
 from threading import Thread
+from datetime import datetime
 
 
 class StreamHandlerWithBuffer(logging.StreamHandler):
-    def __init__(self, stream=None, buffer_time: float = 0.2, buffer_lines: int = 50):
+    def __init__(self, stream=None, buffer_time: float = 0.2, buffer_lines: int = 50, debug=False):
         super().__init__(stream)
         assert buffer_time >= 0 or buffer_lines >= 0, "At least one kind of buffer must be set"
 
         self.buffer_time = buffer_time
         self.buffer_lines = buffer_lines
         self.buffer = []
+        self.debug = debug
 
         if self.buffer_time:
             watcher = Thread(target=self.watcher, daemon=True)
@@ -18,8 +20,11 @@ class StreamHandlerWithBuffer(logging.StreamHandler):
 
     def export(self):
         """Actual writing data out to the stream"""
-        msg = self.terminator.join(self.buffer)
 
+        if self.debug:
+            self.buffer.append(f'StreamHandlerWithBuffer flush: {datetime.now()}')
+
+        msg = self.terminator.join(self.buffer)
         stream = self.stream
         # issue 35046: merged two stream.writes into one.
         stream.write(msg + self.terminator)
@@ -54,10 +59,13 @@ class StreamHandlerWithBuffer(logging.StreamHandler):
         If buffer_time is used, this method will flush the buffer
         after every buffer_time seconds has passed.
         """
+        if self.debug:
+            self.buffer.append(f'StreamHandlerWithBuffer watcher starts: {datetime.now()}')
         while True:
+            time.sleep(self.buffer_time)
             if self.buffer:
                 self.acquire()
                 self.export()
                 self.release()
 
-            time.sleep(self.buffer_time)
+

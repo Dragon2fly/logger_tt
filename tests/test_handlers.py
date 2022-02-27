@@ -1,3 +1,5 @@
+import datetime
+import re
 import time
 
 from io import StringIO
@@ -11,35 +13,36 @@ from logger_tt.handlers import StreamHandlerWithBuffer
 def test_handler_with_buffer_time(caplog, threshold):
     logger = getLogger('Test buffer time')
     my_stream = StringIO()
-    handler = StreamHandlerWithBuffer(stream=my_stream, buffer_time=threshold, buffer_lines=0)
+    handler = StreamHandlerWithBuffer(stream=my_stream, buffer_time=threshold, buffer_lines=0, debug=True)
     formatter = Formatter(fmt="[%(asctime)s.%(msecs)03d] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.propagate = False
 
-    # only one timestamp when not exceeding time threshold
-    lengths1 = []
     with caplog.at_level(DEBUG):
         t0 = time.time()
-        while True:
+        dt = 0
+        while dt < 2*threshold + 2*0.016:
             logger.info('This is my log message')
+            time.sleep(0.01)
             dt = time.time() - t0
-            my_stream.seek(0)
-            logs = my_stream.read()
 
-            if dt < threshold:
-                assert not logs, "No logs while threshold is not exceeded"
-            elif threshold <= dt < threshold + 0.016:
-                time.sleep(0.02)
-            elif threshold + 0.016 <= dt < 2*threshold:
-                assert logs, "logs appear after threshold is exceeded"
-                lengths1.append(len(logs))
-            elif 2*threshold <= dt < 2*threshold + 0.016:
-                time.sleep(0.02)
-            elif dt >= 2*threshold + 0.016:
-                assert len(set(lengths1)) == 1, "During the interval of threshold, no new log should appear"
-                assert len(logs) != lengths1[0], "After threshold, new log should appear"
-                break
+        my_stream.seek(0)
+        logs = my_stream.read()
+
+        data = re.findall(r'StreamHandlerWithBuffer.*\n', logs)
+        start_time = datetime.datetime.strptime(data[0].strip().split(': ')[1], '%Y-%m-%d %H:%M:%S.%f')
+        flush1_time = datetime.datetime.strptime(data[1].strip().split(': ')[1], '%Y-%m-%d %H:%M:%S.%f')
+        flush2_time = datetime.datetime.strptime(data[2].strip().split(': ')[1], '%Y-%m-%d %H:%M:%S.%f')
+
+        dt1 = (flush1_time - start_time).microseconds/1e6
+        dt2 = (flush2_time - flush1_time).microseconds/1e6
+        assert threshold < dt1 < threshold + 0.1*threshold, "It shouldn't flush too soon or too late"
+        assert threshold < dt2 < threshold + 0.1*threshold, "It shouldn't flush too soon or too late"
+
+        lines = logs.splitlines()
+        msg_count = lines.index(data[2].strip()) - lines.index(data[1].strip()) - 1
+        assert msg_count, "Some messages must be logged between 2 flushing"
 
 
 @pytest.mark.parametrize('threshold', [10, 20])

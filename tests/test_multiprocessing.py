@@ -79,6 +79,7 @@ def test_multiprocessing_rollover():
     # test it
     cmd = [sys.executable, "multiprocessing_issue3.py", "3"]
     result = run(cmd, stderr=PIPE, universal_newlines=True)
+    test_config.unlink()
     assert "PermissionError: [WinError 32] The process cannot access the file" not in result.stderr
 
 

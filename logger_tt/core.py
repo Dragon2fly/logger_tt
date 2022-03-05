@@ -22,9 +22,8 @@ root_logger = logging.getLogger()
 class LogConfig:
     def __init__(self):
         self.qclass = None
-        self.queues = []
+        self.root_handlers = []
         self.q_listeners = []
-        self.converted_handlers = set()
 
         # tcp port for socket handler
         self.host = 'localhost'
@@ -72,12 +71,15 @@ class LogConfig:
         self.suppress_level_below = level
         self.suppress_loggers(odict.get("suppress"))
 
+        # backup root handler:
+        self.root_handlers = root_logger.handlers
+
         # set logging mode accordingly
-        self.set_mode(odict['use_multiprocessing'])
+        self._set_mode(odict['use_multiprocessing'])
 
         self.__initialized += 1
 
-    def set_mode(self, use_multiprocessing):
+    def _set_mode(self, use_multiprocessing):
         """Select logging method according to platform and multiprocessing"""
         os_name = platform.system()
         if use_multiprocessing not in [True, False, 'fork', 'spawn', 'forkserver']:
@@ -86,19 +88,19 @@ class LogConfig:
         if not use_multiprocessing:
             # for normal usage, thread queue is more than enough
             self.qclass = thQueue
-            self.replace_with_queue_handler()
+            self._replace_with_queue_handler()
         else:
             # multiprocessing
             if os_name == 'Linux' and use_multiprocessing == 'fork':
                 # because of copy on write while forking, multiprocessing queue can be used
                 self.qclass = mpQueue
-                self.replace_with_queue_handler()
+                self._replace_with_queue_handler()
             else:
                 # __main__ is imported from crash for each child process
                 # so we must use socket to communicate between processes
-                self.replace_with_socket_handler()
+                self._replace_with_socket_handler()
 
-    def replace_with_queue_handler(self):
+    def _replace_with_queue_handler(self):
         """ setup a central queue handler and start a listener thread """
         all_loggers = [root_logger] + [logging.getLogger(name) for name in root_logger.manager.loggerDict]
 
@@ -124,7 +126,7 @@ class LogConfig:
 
         root_logger.debug('Logging queue listener started!')
 
-    def replace_with_socket_handler(self):
+    def _replace_with_socket_handler(self):
         """ setup a central socket handler and start a listener server """
         logger = logging.getLogger()
 
@@ -145,6 +147,23 @@ class LogConfig:
             serving = Thread(target=self.tcp_server.serve_until_stopped)
             serving.start()
             root_logger.debug('Logging server started!')
+
+    def replace_handler_stream(self, index: int, stream):
+        """Replace a stream of the root logger's handler
+            This is mainly for GUI app to redirect the log to a widget
+        """
+        if current_process().name != 'MainProcess':
+            # nothing to do in child processes as all logs are redirected to main
+            return
+
+        if len(self.root_handlers) < index:
+            raise ValueError(f'Trying to replace stream of the handler at index {index} but index is out of range')
+
+        handler = self.root_handlers[index]
+        assert isinstance(handler, logging.StreamHandler), f"Not a stream handler: {handler}"
+        assert hasattr(stream, 'write') and hasattr(stream, 'flush'), f"Doesn't look like a stream: {stream}"
+
+        handler.stream = stream
 
     def suppress_loggers(self, loggers):
         if not loggers:

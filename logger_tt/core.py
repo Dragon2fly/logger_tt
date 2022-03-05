@@ -198,6 +198,13 @@ class LogConfig:
             ql.stop()
             atexit.unregister(ql.stop)
 
+            # py3.10 re-opens the log file after logging.shutdown() to workaround `open` NameError
+            # https://github.com/python/cpython/commit/45df61fd2d58e8db33179f3b5d00e53fe6a7e592
+            # We have to close it back
+            for handler in ql.handlers:
+                if isinstance(handler, logging.FileHandler):
+                    handler.close()
+
 
 class LogRecordStreamHandler(socketserver.StreamRequestHandler):
     """Handler for a streaming logging request.

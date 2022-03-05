@@ -37,8 +37,8 @@ def test_handler_with_buffer_time(caplog, threshold):
 
         dt1 = (flush1_time - start_time).microseconds/1e6
         dt2 = (flush2_time - flush1_time).microseconds/1e6
-        assert threshold < dt1 < threshold + 0.1*threshold, "It shouldn't flush too soon or too late"
-        assert threshold < dt2 < threshold + 0.1*threshold, "It shouldn't flush too soon or too late"
+        assert threshold < dt1 < threshold + 0.2*threshold, "It shouldn't flush too soon or too late"
+        assert threshold < dt2 < threshold + 0.2*threshold, "It shouldn't flush too soon or too late"
 
         lines = logs.splitlines()
         msg_count = lines.index(data[2].strip()) - lines.index(data[1].strip()) - 1

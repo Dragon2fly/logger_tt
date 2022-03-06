@@ -630,12 +630,12 @@ RuntimeError: Too much laughing with a=haha and b=hihi
      ```yaml
      handlers:
        buffer_stream_handler:
-         class: logger_tt.handlers.StreamHandlerWithBuffer,
-         level: DEBUG,
-         formatter: brief,
-         stream: ext://sys.stdout,
-         buffer_time: 0.5,
-         buffer_lines: 0,
+         class: logger_tt.handlers.StreamHandlerWithBuffer
+         level: DEBUG
+         formatter: brief
+         stream: ext://sys.stdout
+         buffer_time: 0.5
+         buffer_lines: 0
          debug: False
      
      root:
@@ -755,12 +755,12 @@ handlers:
     when: midnight
   
   buffer_stream_handler:
-         class: logger_tt.handlers.StreamHandlerWithBuffer,
-         level: DEBUG,
-         formatter: brief,
-         stream: ext://sys.stdout,
-         buffer_time: 0.5,
-         buffer_lines: 0,
+         class: logger_tt.handlers.StreamHandlerWithBuffer
+         level: DEBUG
+         formatter: brief
+         stream: ext://sys.stdout
+         buffer_time: 0.5
+         buffer_lines: 0
          debug: False
 
 loggers:

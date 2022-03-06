@@ -21,6 +21,7 @@ Even multiprocessing logging becomes a breeze.
   * [Temporary disable logging](#8-temporary-disable-logging)
   * [Limit traceback line length](#9-limit-traceback-lines-length)
   * [Analyze `raise` exception line](#10-analyze-raise-exception-line)
+  * [StreamHandler with buffer](#11-streamhandler-with-buffer)
     
 * [Sample config](#sample-config)
   * [YAML format](#1-yaml-format)
@@ -611,6 +612,111 @@ RuntimeError: Too much laughing with a=haha and b=hihi
     setup_logging(analyze_raise_statement=True)
 
 
+### 11. StreamHandler with buffer:
+   This handler is mainly to solve the problem of outputting a tremendous amount of logs to GUI applications in real-time.
+   
+   GUI applications use threading to display content while listening for user input (button click, key pressing, mouse scroll).
+   But since python actually running only one thread at a time due to the GIL (global interpreter lock), 
+   processing to display a tremendous amount of logs to the GUI widget will lock a thread for quite a long time. 
+   During this time, no user input will be handled and the app seems unresponsive.
+
+   The answer to this problem is to cache the log and output them at once after some interval or number of cached lines reached a threshold.
+   This significantly reduces the overhead on the widget side and makes the app responsive. 
+   The solution is implemented in the new `StreamHandlerWithBuffer` which is inside `logger_tt.handlers`. 
+   There are 2 steps to use this handler.
+     
+   * config the handler in the `log_config` file.
+
+     ```yaml
+     handlers:
+       buffer_stream_handler:
+         class: logger_tt.handlers.StreamHandlerWithBuffer,
+         level: DEBUG,
+         formatter: brief,
+         stream: ext://sys.stdout,
+         buffer_time: 0.5,
+         buffer_lines: 0,
+         debug: False
+     
+     root:
+       level: DEBUG
+       handlers: [console, error_file_handler, buffer_stream_handler]
+     ```
+     
+     Its parameters look exactly like the `console` handler except the last 3 ones.
+     * `buffer_time`: the cache time interval in **seconds** before it flush the log out 
+     * `buffer_line`: the **number of line** to cache before it flush the log out
+     * `debug`: log the time that it flush the log out or not<br>
+     
+     For `buffer_line`, to avoid the last lines of log not printed out as the number of line is below threshold, 
+     you should set `buffer_time` to a certain number too.  
+
+     Then, you also need to add this handler to the root logger's handlers.
+
+
+   * replace the `stream`:
+     you need to replace the `stdout` with your GUI widget stream.
+     You cannot do this in the config file since your widget is only appear during runtime. 
+     You have to do this in the code.
+
+     ```python
+     config = setup_logging(config_path='log_config.json')
+     config.replace_handler_stream(index=HANDLER_INDEX, stream=WIDGET_STREAM)
+     ```
+     Setup your logging as usual with your config file, 
+     then call `replace_handler_stream` to replace the with your widget's stream.
+     * `index`: the index of the handler, in the root logger' `handlers` list, that you want to replace the stream
+     * `stream`: the stream that you want to put into this handler.
+   
+
+   Below is the example with `PySimpleGUI v4.57.0` with the above config.
+   ```python
+import time
+from threading import Thread
+
+import PySimpleGUI as sg
+from logger_tt import setup_logging, logger
+
+stop_flag = False
+
+# GUI config
+sg.theme('DarkAmber')
+layout = [
+    [[sg.Button("Show Log", key="-show_log-"),
+     sg.Button("stop", key="-stop-", button_color='red')],
+     sg.Multiline(size=(80, 30), font='Courier 10', key='log', autoscroll=True)]
+]
+window = sg.Window('Logging tool', layout, finalize=True)
+
+# logging config
+config = setup_logging(config_path='log_config.json')
+config.replace_handler_stream(index=2, stream=window["log"])
+
+
+def my_func():
+    """long running task in the background"""
+    while not stop_flag:
+        for i in range(1000):
+            logger.warning(f" {i} Function is empty")
+        time.sleep(1)
+
+
+while True:
+    event, values = window.read()
+    if event == sg.WINDOW_CLOSED:
+        break
+    if event == "-show_log-":
+        logger.info(__name__)
+        Thread(target=my_func).start()
+    if event == "-stop-":
+        stop_flag = True
+        logger.info(f"stop button pressed")
+
+window.close()
+```
+You could set `index=0` to use the normal `StreamHandler` and 
+see the difference while clicking the `stop` button for yourself.
+
 
 # Sample config:
 Below are default config files that used by `logger-tt`. You can copy and modify them as needed. 
@@ -647,6 +753,15 @@ handlers:
     backupCount: 15
     encoding: utf8
     when: midnight
+  
+  buffer_stream_handler:
+         class: logger_tt.handlers.StreamHandlerWithBuffer,
+         level: DEBUG,
+         formatter: brief,
+         stream: ext://sys.stdout,
+         buffer_time: 0.5,
+         buffer_lines: 0,
+         debug: False
 
 loggers:
   urllib3:
@@ -710,7 +825,17 @@ logger_tt:
      "backupCount": 15,
      "encoding": "utf8",
      "when": "midnight"
-   }
+   },
+
+   "buffer_stream_handler": {
+      "class": "logger_tt.handlers.StreamHandlerWithBuffer",
+      "level": "INFO",
+      "formatter": "simple",
+      "stream": "ext://sys.stdout",
+      "buffer_time": 0.5,
+      "buffer_lines": 0,
+      "debug": false
+    }
  },
 
  "loggers": {
@@ -747,6 +872,14 @@ logger_tt:
 ```
 
 # Changelog
+## 1.7.0
+* Fixed: 
+  * multiprocessing: log file rollover fails as child process keep opening the file.
+  * multiprocessing: if the log path is set by variable with time, 
+    child process creates a new redundant log path.
+* New functionality: Added `StreamHandlerWithBuffer`. 
+    GUI app could use this handler to keep the app responsive while having a tremendous log output. 
+
 ## 1.6.1
 * Added `limit_line_length` parameter: log only maximum `n` characters for each traceback line. 
   This prevents dumping the whole huge content of the variable into the log. `n=1000` by default.

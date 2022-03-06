@@ -127,11 +127,13 @@ setup_logging(config_path="", log_path="",
               use_multiprocessing=False,
               limit_line_length=1000, 
               analyze_raise_statement=False,
+              host="",
+              port=0,
               )
 ```
 
 This function also return a `LogConfig` object. 
-Except `config_path`, `log_path` and `use_multiprocessing`, 
+Except `config_path`, `log_path`, `use_multiprocessing`, `host` and `port`, 
 other parameters are attributes of this object and can be changed on the fly.
 
 Except `config_path`, `log_path`, all other parameters can be defined in `logger_tt` section in the config file
@@ -507,6 +509,18 @@ The content of `log.txt` should be similar to below:
    **Note**: Under linux, to use `queueHandler`, you must pass `use_multiprocessing="fork"` to `setup_logging`.<br>
    Other options `True`, `spawn`, `forkserver` will use `socketHandler` by default.<br> 
    This is to prevent you `set_start_method` as `spawn` under linux and thus `queueHandler` won't work.
+
+
+   **Socket Address**: `socketHandler` will use tcp `localhost` and port `9020` by default. 
+   In the rare cases where you run multiple multiprocessing applications with `logger_tt`, 
+   the `Address already in use` error will be raised. In such cases, you have to set the address manually.
+
+```python
+setup_logging(host='localhost', port=6789)
+```
+   You can omit the `host` if you use `"localhost"`. 
+   You can also set this in the log config file for each application. 
+
    
 ### 8. Temporary disable logging:
 
@@ -875,10 +889,14 @@ logger_tt:
 ## 1.7.0
 * Fixed: 
   * multiprocessing: log file rollover fails as child process keep opening the file.
-  * multiprocessing: if the log path is set by variable with time, 
+  * multiprocessing: if the log path is set by a variable with time, 
     child process creates a new redundant log path.
-* New functionality: Added `StreamHandlerWithBuffer`. 
-    GUI app could use this handler to keep the app responsive while having a tremendous log output. 
+  
+* New functionality: Added `StreamHandlerWithBuffer`. Buffer the log output by time or by line number.
+    GUI app could use this handler to keep the app responsive while having a tremendous log output.
+
+* Usability: In multiprocessing logging, 
+  users can set the log server address themselves through `setup_logging` or log config file.
 
 ## 1.6.1
 * Added `limit_line_length` parameter: log only maximum `n` characters for each traceback line. 
@@ -933,7 +951,7 @@ logger_tt:
 **Pre-existing loggers:**<br> 
 Before this version, if you import submodules before importing `logger_tt` and 
 there are loggers in submodules, these loggers do not inspect exception when you call `logger.exception()`. 
-That is because there class was different than loggers created after importing `logger_tt`.
+That is because there class was different from the loggers created after importing `logger_tt`.
 Now all loggers have the same new class regardless the point of importing `logger_tt`.
 
 **setup_logging()**: This function should only be called once. 

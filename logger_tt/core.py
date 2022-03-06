@@ -26,8 +26,8 @@ class LogConfig:
         self.q_listeners = []
 
         # tcp port for socket handler
-        self.host = 'localhost'
-        self.port = handlers.DEFAULT_TCP_LOGGING_PORT
+        self._host = 'localhost'
+        self._port = handlers.DEFAULT_TCP_LOGGING_PORT
         self.tcp_server = None
 
         # other settings
@@ -73,6 +73,10 @@ class LogConfig:
 
         # backup root handler:
         self.root_handlers = root_logger.handlers
+
+        # host and port for multiprocessing logging
+        self._host = odict.get('host') or 'localhost'
+        self._port = odict.get('port') or handlers.DEFAULT_TCP_LOGGING_PORT
 
         # set logging mode accordingly
         self._set_mode(odict['use_multiprocessing'])
@@ -137,13 +141,13 @@ class LogConfig:
         logger.handlers = []
 
         # add socket handler
-        socket_handler = logging.handlers.SocketHandler(self.host, self.port)
+        socket_handler = logging.handlers.SocketHandler(self._host, self._port)
         atexit.register(socket_handler.close)
         logger.addHandler(socket_handler)
 
         # initiate server
         if current_process().name == 'MainProcess':
-            self.tcp_server = LogRecordSocketReceiver(self.host, self.port, all_handlers)
+            self.tcp_server = LogRecordSocketReceiver(self._host, self._port, all_handlers)
             serving = Thread(target=self.tcp_server.serve_until_stopped)
             serving.start()
             root_logger.debug('Logging server started!')

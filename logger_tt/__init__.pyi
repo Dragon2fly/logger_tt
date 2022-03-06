@@ -21,4 +21,6 @@ def setup_logging(config_path: str = "", log_path: str = "",
                   suppress_level_below: int = logging.WARNING,
                   use_multiprocessing: bool = False,
                   limit_line_length: int = 1000,
-                  analyze_raise_statement: bool = False) -> LogConfig: ...
+                  analyze_raise_statement: bool = False,
+                  host: str = None,
+                  port: int = None) -> LogConfig: ...

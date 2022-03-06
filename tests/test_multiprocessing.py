@@ -100,3 +100,24 @@ def test_multiprocessing_issue5():
     logfile = sub_folders[0] / 'info.log'
     assert logfile.exists()
     assert 'Test for issue 5' in logfile.read_text()
+
+
+def test_multiprocessing_port_change():
+    """Change the tcp server's port to a user selected one"""
+    yaml = YAML(typ='safe')
+    config_file = Path("../logger_tt/log_config.yaml")
+    log_config = yaml.load(config_file.read_text())
+    log_config['logger_tt']['use_multiprocessing'] = True
+    log_config['logger_tt']['port'] = 6789
+
+    # write the config out
+    test_config = Path("multiprocessing_change_port.yaml")
+    yaml.dump(data=log_config, stream=test_config)
+
+    cmd = [sys.executable, "multiprocessing_change_port.py", "3"]
+    result = run(cmd, stdout=PIPE, universal_newlines=True)
+
+    test_config.unlink()
+    assert '6789' in result.stdout, "Port failed to change"
+    assert result.stdout.count("stopped") == 3, "Child process failed to log"
+

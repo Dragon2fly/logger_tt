@@ -65,6 +65,8 @@
     "use_multiprocessing": false,
     "limit_line_length": 1000,
     "analyze_raise_statement": false,
+    "host": "",
+    "port": 0,
     "default_logger_formats": {
       "normal": ["%(name)s", "%(filename)s"],
       "thread": ["%(message)s", "%(threadName)s %(message)s"],

@@ -29,12 +29,12 @@ handlers:
     delay: True
 
   buffer_stream_handler:
-    class: logger_tt.handlers.StreamHandlerWithBuffer,
-    level: DEBUG,
-    formatter: brief,
-    stream: ext://sys.stdout,
-    buffer_time: 0.5,
-    buffer_lines: 0,
+    class: logger_tt.handlers.StreamHandlerWithBuffer
+    level: DEBUG
+    formatter: brief
+    stream: ext://sys.stdout
+    buffer_time: 0.5
+    buffer_lines: 0
     debug: False
 
 loggers:
@@ -57,6 +57,8 @@ logger_tt:
   use_multiprocessing: False
   limit_line_length: 1000
   analyze_raise_statement: False
+  host: ""
+  port: 0
   default_logger_formats:
     normal: ["%(name)s", "%(filename)s"]
     thread: ["%(message)s", "%(threadName)s %(message)s"]

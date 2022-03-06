@@ -111,6 +111,7 @@ def merge_config(from_file: dict, from_func: dict) -> dict:
                     full_context=0, suppress=None,
                     suppress_level_below=logging.WARNING, use_multiprocessing=False,
                     limit_line_length=1000, analyze_raise_statement=False,
+                    host=None, port=None,
                     )
     merged = {}
     for key, val in defaults.items():
@@ -149,6 +150,8 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
                                     queue.Queue to multiprocessing.Queue . This option can only be used here.
         :key limit_line_length   : int, define how long should one log line be. 0: unlimited; n: n character
         :key analyze_raise_statement: bool, should the variables in `raise` exception line be shown or not.
+        :key host: str, default to 'localhost'. Used in multiprocessing logging
+        :key port: int, default to logging.handlers.DEFAULT_TCP_LOGGING_PORT. Used in multiprocessing logging
     """
     if internal_config.initialized:
         logger.warning('Re-initializing logger_tt. "setup_logging()" should only be called one.')

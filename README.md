@@ -630,11 +630,11 @@ RuntimeError: Too much laughing with a=haha and b=hihi
    This handler is mainly to solve the problem of outputting a tremendous amount of logs to GUI applications in real-time.
    
    GUI applications use threading to display content while listening for user input (button click, key pressing, mouse scroll).
-   But since python actually running only one thread at a time due to the GIL (global interpreter lock), 
+   But since cpython actually running only one thread at a time due to the GIL (global interpreter lock), 
    processing to display a tremendous amount of logs to the GUI widget will lock a thread for quite a long time. 
    During this time, no user input will be handled and the app seems unresponsive.
 
-   The answer to this problem is to cache the log and output them at once after some interval or number of cached lines reached a threshold.
+   The answer to this problem is to cache the log and output them at once after some interval or a number of cached lines reached a threshold.
    This significantly reduces the overhead on the widget side and makes the app responsive. 
    The solution is implemented in the new `StreamHandlerWithBuffer` which is inside `logger_tt.handlers`. 
    There are 2 steps to use this handler.
@@ -665,7 +665,7 @@ RuntimeError: Too much laughing with a=haha and b=hihi
      For `buffer_line`, to avoid the last lines of log not printed out as the number of line is below threshold, 
      you should set `buffer_time` to a certain number too.  
 
-     Then, you also need to add this handler to the root logger's handlers.
+     Then, you need to add this handler to the `root` logger's `handlers` list.
 
 
    * replace the `stream`:
@@ -769,13 +769,13 @@ handlers:
     when: midnight
   
   buffer_stream_handler:
-         class: logger_tt.handlers.StreamHandlerWithBuffer
-         level: DEBUG
-         formatter: brief
-         stream: ext://sys.stdout
-         buffer_time: 0.5
-         buffer_lines: 0
-         debug: False
+    class: logger_tt.handlers.StreamHandlerWithBuffer
+    level: DEBUG
+    formatter: brief
+    stream: ext://sys.stdout
+    buffer_time: 0.5
+    buffer_lines: 0
+    debug: False
 
 loggers:
   urllib3:
@@ -842,13 +842,13 @@ logger_tt:
    },
 
    "buffer_stream_handler": {
-      "class": "logger_tt.handlers.StreamHandlerWithBuffer",
-      "level": "INFO",
-      "formatter": "simple",
-      "stream": "ext://sys.stdout",
-      "buffer_time": 0.5,
-      "buffer_lines": 0,
-      "debug": false
+     "class": "logger_tt.handlers.StreamHandlerWithBuffer",
+     "level": "INFO",
+     "formatter": "simple",
+     "stream": "ext://sys.stdout",
+     "buffer_time": 0.5,
+     "buffer_lines": 0,
+     "debug": false
     }
  },
 

@@ -2,4 +2,5 @@ include LICENSE
 include README.md
 include logger_tt/log_conf.json
 include logger_tt/log_conf.yaml
+include logger_tt/__init__.pyi
 graft tests

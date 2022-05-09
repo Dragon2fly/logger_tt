@@ -75,9 +75,11 @@ class LogConfig:
         self.root_handlers = root_logger.handlers
 
         # host and port for multiprocessing logging
-        self._host = odict.get('host') or 'localhost'
-        self._port = odict.get('port') or handlers.DEFAULT_TCP_LOGGING_PORT
-
+        self._host = odict.get('host') or 'localhost' 
+        self._port = odict.get('port')
+            if self._port is None:
+                self._port = handlers.DEFAULT_TCP_LOGGING_PORT
+       
         # set logging mode accordingly
         self._set_mode(odict['use_multiprocessing'])
 

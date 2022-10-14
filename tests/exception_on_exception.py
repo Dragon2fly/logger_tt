@@ -9,17 +9,17 @@ logger = getLogger(__name__)
 
 def foo():
     try:
-        a,b=1,0
-        a/b
+        a=1
+        raise RuntimeError(a)
     except:
         try:
-            c,d=1,0
-            c/d
+            b=2
+            raise RuntimeError(b)
         except:
-            e,f=1,0
-            e/f
+            c=3
+            raise RuntimeError(c)
 
-if __name__ == '__main__':
+def main():
     logger.info('========A Caught Exception===========')
     try:
         foo()
@@ -27,3 +27,6 @@ if __name__ == '__main__':
         logger.exception('Caught exception:')
     logger.info('=======An Uncaught Exception=========')
     foo()
+
+if __name__ == '__main__':
+    main()

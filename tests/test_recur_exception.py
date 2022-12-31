@@ -31,12 +31,16 @@ Traceback \(most recent call last\):
      |-> c = 3
 RuntimeError: 3'''
 
-def test_recur_exception():
-    for case in ['caught', 'uncaught']:
-        cmd = [sys.executable, "exception_on_exception.py", case]
-        run(cmd)
-
+def test_recur_exception_caught():
+    cmd = [sys.executable, "exception_on_exception.py", "caught"]
+    run(cmd)
     data = log.read_text()
-    pattern = rf'Caught exception\n{TRACE}[\S\s\n]*Uncaught exception\n{TRACE}'
-    
+    pattern = rf'Caught exception\n{TRACE}'
+    assert re.search(pattern, data, re.DOTALL)
+
+def test_recur_exception_uncaught():
+    cmd = [sys.executable, "exception_on_exception.py", "uncaught"]
+    run(cmd)
+    data = log.read_text()
+    pattern = rf'Uncaught exception\n{TRACE}'
     assert re.search(pattern, data, re.DOTALL)

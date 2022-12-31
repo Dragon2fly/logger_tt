@@ -21,13 +21,12 @@ def foo():
             raise RuntimeError(c)
 
 if __name__ == '__main__':
-    match sys.argv[-1]:
-        case 'caught':
-            try:
-                foo()
-            except:
-                logger.exception('Caught exception:')
-        case 'uncaught':
+    if sys.argv[-1] == 'caught':
+        try:
             foo()
-        case _:
-            raise ValueError('Usage [PROG] {caught,uncaught}')
+        except:
+            logger.exception('Caught exception:')
+    elif sys.argv[-1] ==  'uncaught':
+        foo()
+    else:
+        raise ValueError('Usage [PROG] {caught,uncaught}')

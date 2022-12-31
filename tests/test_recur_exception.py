@@ -1,60 +1,42 @@
 import re
 import sys
-import time
 from pathlib import Path
-from subprocess import run, PIPE
-import pytest
-import re
-from logger_tt.inspector import get_recur_attr, get_repr, is_full_statement, get_full_statement, MEM_PATTERN
+from subprocess import run
 
 __author__ = "ZeroRin"
 log = Path.cwd() / 'logs/log.txt'
 
+TRACE=r'''Traceback \(most recent call last\):
+  File ".+?", line \d+?, in foo
+    raise RuntimeError\(a\)
+     |-> a = 1
+RuntimeError: 1
+
+During handling of the above exception, another exception occurred:
+
+Traceback \(most recent call last\):
+  File ".+?", line \d+, in foo
+    raise RuntimeError\(b\)
+     |-> b = 2
+RuntimeError: 2
+
+During handling of the above exception, another exception occurred:
+
+Traceback \(most recent call last\):
+  File ".+", line \d+, in <module>
+    foo\(\)
+
+  File ".+", line \d+, in foo
+    raise RuntimeError\(c\)
+     |-> c = 3
+RuntimeError: 3'''
 
 def test_recur_exception():
-    cmd = [sys.executable, "exception_on_exception.py"]
-    run(cmd)
-    data = log.read_text()
-    pattern = (
-        r'Caught exception:\n'
-        r'Traceback \(most recent call last\):'
-        r'[\S\s]*'
-        r'raise RuntimeError\(a\)'
-        r'[\S\s]*'
-        r'RuntimeError: 1\n\n'
-        r'During handling of the above exception, another exception occurred:\n\n'
-        r'Traceback \(most recent call last\):'
-        r'[\S\s]*'
-        r'raise RuntimeError\(b\)'
-        r'[\S\s]*'
-        r'RuntimeError: 2\n\n'
-        r'During handling of the above exception, another exception occurred:\n\n'
-        r'Traceback \(most recent call last\):'
-        r'[\S\s]*'
-        r'raise RuntimeError\(c\)'
-        r'[\S\s]*'
-        r'RuntimeError: 3'
-        r'[\S\s]*'
-        r'Uncaught exception:\n'
-        r'Traceback \(most recent call last\):'
-        r'[\S\s]*'
-        r'raise RuntimeError\(a\)'
-        r'[\S\s]*'
-        r'RuntimeError: 1\n\n'
-        r'During handling of the above exception, another exception occurred:\n\n'
-        r'Traceback \(most recent call last\):'
-        r'[\S\s]*'
-        r'raise RuntimeError\(b\)'
-        r'[\S\s]*'
-        r'RuntimeError: 2\n\n'
-        r'During handling of the above exception, another exception occurred:\n\n'
-        r'Traceback \(most recent call last\):'
-        r'[\S\s]*'
-        r'raise RuntimeError\(c\)'
-        r'[\S\s]*'
-        r'RuntimeError: 3'
-        r'[\S\s]*'
-    )
-    assert re.search(pattern,data)
+    for case in ['caught', 'uncaught']:
+        cmd = [sys.executable, "exception_on_exception.py", case]
+        run(cmd)
 
-test_recur_exception()
+    data = log.read_text()
+    pattern = rf'Caught exception\n{TRACE}[\S\s\n]*Uncaught exception\n{TRACE}'
+    
+    assert re.search(pattern, data, re.DOTALL)

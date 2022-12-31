@@ -1,5 +1,6 @@
-import time
+import sys
 from logging import getLogger
+
 from logger_tt import setup_logging
 
 __author__ = "ZeroRin"
@@ -19,14 +20,14 @@ def foo():
             c=3
             raise RuntimeError(c)
 
-def main():
-    logger.info('========A Caught Exception===========')
-    try:
-        foo()
-    except:
-        logger.exception('Caught exception:')
-    logger.info('=======An Uncaught Exception=========')
-    foo()
-
 if __name__ == '__main__':
-    main()
+    match sys.argv[-1]:
+        case 'caught':
+            try:
+                foo()
+            except:
+                logger.exception('Caught exception:')
+        case 'uncaught':
+            foo()
+        case _:
+            raise ValueError('Usage [PROG] {caught,uncaught}')

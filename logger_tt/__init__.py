@@ -5,7 +5,7 @@ import threading
 from pathlib import Path
 from logging.config import dictConfig
 from logging import getLogger
-from .inspector import analyze_frame, logging_disabled
+from .inspector import analyze_frame, logging_disabled, analyze_exception_recur
 from .core import LogConfig, DefaultFormatter
 from multiprocessing import current_process
 
@@ -27,16 +27,13 @@ def handle_exception(exc_type, exc_value, exc_traceback, thread_name=''):
     analyze_raise = internal_config.analyze_raise_statement
 
     # Root logger will log all other uncaught exceptions
-    txt = analyze_frame(exc_traceback, full_context, limit_length, analyze_raise)
+    txt = analyze_exception_recur(exc_value, full_context, limit_length, analyze_raise)
 
     # Exception in a child thread?
     if thread_name:
         thread_name = ' in ' + thread_name
 
-    logging.error(f"Uncaught exception{thread_name}:\n"
-                  f"Traceback (most recent call last):\n"
-                  f"{txt}",
-                  exc_info=(exc_type, exc_value, None))
+    logging.error(f"Uncaught exception{thread_name}:\n{txt}")
 
     if not thread_name:
         # As interpreter is going to shutdown after this function,
@@ -215,11 +212,8 @@ class ExceptionLogger(logging.Logger):
             full_context = internal_config.full_context
             limit_length = internal_config.limit_line_length
             analyze_raise = internal_config.analyze_raise_statement
-            txt = analyze_frame(exc_traceback, full_context, limit_length, analyze_raise)
-            logging.error(f'{msg}\n'
-                          f"Traceback (most recent call last):\n"
-                          f"{txt}",
-                          exc_info=(exc_type, exc_value, None))
+            txt = analyze_exception_recur(exc_value, full_context, limit_length, analyze_raise)
+            logging.error(f'{msg}\n{txt}')
         else:
             logging.error(msg, *args, exc_info=exc_info, **kwargs)
 

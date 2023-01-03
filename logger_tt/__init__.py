@@ -10,7 +10,7 @@ from .core import LogConfig, DefaultFormatter
 from multiprocessing import current_process
 
 __author__ = "Duc Tin"
-__all__ = ['setup_logging', 'logging_disabled', 'getLogger', 'logger']
+__all__ = ['setup_logging', 'logging_disabled', 'getLogger', 'logger', 'add_logging_level']
 
 """Config log from file and make it also logs uncaught exception"""
 
@@ -153,6 +153,9 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
     if internal_config.initialized:
         logger.warning('Re-initializing logger_tt. "setup_logging()" should only be called one.')
 
+    # add NOTICE level for telegram handler
+    add_logging_level('NOTICE', logging.INFO + 5)
+
     if config_path:
         cfgpath = Path(config_path)
         assert cfgpath.is_file(), 'Input config path is not a file!'
@@ -244,6 +247,32 @@ def logger_tt_filter(record):
         return True
     if record.levelno > internal_config.suppress_level_below:
         return True
+
+
+def add_logging_level(level_name, level_num, method_name=None):
+    # inspired by @Mad Physicist
+    # https://stackoverflow.com/a/35804945/3655984
+    if not method_name:
+        method_name = level_name.lower()
+
+    if hasattr(logging, level_name):
+        logger.warning(f'Re-define level {level_name} in logging module')
+    if hasattr(logging, method_name):
+        logger.warning(f'Re-define method {method_name} in logging module')
+    if hasattr(logging.getLoggerClass(), method_name):
+        logger.warning(f'Re-define {method_name} in Logger class')
+
+    def logForLevel(self, message, *args, **kwargs):
+        if self.isEnabledFor(level_num):
+            self._log(level_num, message, args, **kwargs)
+
+    def logToRoot(message, *args, **kwargs):
+        logging.log(level_num, message, *args, **kwargs)
+
+    logging.addLevelName(level_num, level_name)
+    setattr(logging, level_name, level_num)
+    setattr(logging.getLoggerClass(), method_name, logForLevel)
+    setattr(logging, method_name, logToRoot)
 
 
 logging.setLoggerClass(ExceptionLogger)

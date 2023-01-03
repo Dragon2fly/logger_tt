@@ -47,6 +47,9 @@ class LogConfig:
         # initialized counter
         self.__initialized = 0
 
+        # use context injector
+        self.__middle_handlers = []
+
     @property
     def initialized(self):
         return self.__initialized
@@ -120,6 +123,7 @@ class LogConfig:
             queue = self.qclass()
             q_handler = handlers.QueueHandler(queue)
             logger.addHandler(q_handler)
+            self.__middle_handlers.append(q_handler)
 
             ql = handlers.QueueListener(queue, *all_handlers, respect_handler_level=True)
             self.q_listeners.append(ql)
@@ -144,6 +148,7 @@ class LogConfig:
         socket_handler = logging.handlers.SocketHandler(self._host, self._port)
         atexit.register(socket_handler.close)
         logger.addHandler(socket_handler)
+        self.__middle_handlers.append(socket_handler)
 
         # initiate server
         if current_process().name == 'MainProcess':
@@ -208,6 +213,14 @@ class LogConfig:
             for handler in ql.handlers:
                 if isinstance(handler, logging.FileHandler):
                     handler.close()
+
+    def set_context_injector(self, injector):
+        for handler in self.__middle_handlers:
+            handler.addFilter(injector)
+
+    def remove_context_injector(self, injector):
+        for handler in self.__middle_handlers:
+            handler.removeFilter(injector)
 
 
 class LogRecordStreamHandler(socketserver.StreamRequestHandler):

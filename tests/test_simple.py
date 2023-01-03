@@ -195,3 +195,16 @@ def test_double_setup_logging():
 
     log_data = log.read_text()
     assert "WARNING" in log_data
+
+
+def test_context_injector():
+    def injector(record):
+        record.msg = 'injected text ' + record.msg
+        return True
+
+    with setup_logging() as log_config:
+        log_config.set_context_injector(injector)
+        my_logger.info('function as Filter')
+
+    log_data = log.read_text()
+    assert "injected text" in log_data

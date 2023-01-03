@@ -115,7 +115,8 @@ def test_multiprocessing_port_change():
     yaml.dump(data=log_config, stream=test_config)
 
     cmd = [sys.executable, "multiprocessing_change_port.py", "3"]
-    result = run(cmd, stdout=PIPE, universal_newlines=True)
+    result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+    assert result.returncode == 0, f'subprocess crashed with error: {result.stderr}'
 
     test_config.unlink()
     assert '6789' in result.stdout, "Port failed to change"

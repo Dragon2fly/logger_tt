@@ -37,6 +37,15 @@ handlers:
     buffer_lines: 0
     debug: False
 
+  telegram_handler:
+    class: logger_tt.handlers.TelegramHandler
+    level: NOTICE
+    formatter: brief
+    debug: False
+    token: "your bot token, can be set in code (fetch from environ) for better security"
+    unique_ids: ["list of chat_id/tuple(group_id, topic_index)"]
+
+
 loggers:
   urllib3:
     level: WARNING

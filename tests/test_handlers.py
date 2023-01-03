@@ -2,11 +2,11 @@ import datetime
 import re
 import time
 
-from io import StringIO
+from io import StringIO, BytesIO
 from logging import getLogger, DEBUG, Formatter
 
 import pytest
-from logger_tt.handlers import StreamHandlerWithBuffer
+from logger_tt.handlers import StreamHandlerWithBuffer, TelegramHandler
 
 
 @pytest.mark.parametrize('threshold', [0.2, 0.4])
@@ -70,3 +70,74 @@ def test_handler_with_buffer_lines(caplog, threshold):
                 my_stream.seek(0)
                 logs = my_stream.read().splitlines()
                 assert len(logs) == 2*threshold, "Total log lines should equal threshold * 2"
+
+
+# @pytest.mark.skip('Uncomment this line. Add your bot token and chat_id/(group_id, topic) to test. Already tested!')
+# @pytest.mark.parametrize('unique_id', [123456789,
+#                                        (-1234567890123, 2),
+#                                        (-1234567890123, 4)])
+def test_telegram_handler_basic(unique_id):
+    bot_token = '1700505955:AAGTs3Syl3sRBzOq2jwjgsp9EsS8WqjExpo'
+    logger = getLogger('test telegram')
+    handler = TelegramHandler(token=bot_token, unique_ids=[unique_id])
+    formatter = Formatter(fmt="[%(asctime)s.%(msecs)03d] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.propagate = False
+
+    try:
+        logger.warning('this is my warning')
+        feedback = handler.feedback[unique_id]
+        assert feedback.get('ok')
+
+        logger.error('this is my error \n this is the next line')
+        feedback = handler.feedback[unique_id]
+        assert feedback.get('ok')
+    finally:
+        logger.removeHandler(handler)
+
+
+def test_telegram_handler_error(caplog):
+    bot_token = ''
+    user_id = 123456789
+    logger = getLogger('test telegram')
+    handler = TelegramHandler(token=bot_token, unique_ids=[user_id], debug=True)
+    formatter = Formatter(fmt="[%(asctime)s.%(msecs)03d] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.propagate = False
+    getLogger().setLevel(0)
+
+    # setup stub function
+    from urllib import request, error
+
+    def fake_urlopen(*arg, **kwargs):
+        if code != 200:
+            raise error.HTTPError('fake_url', code=code, msg='fake_url raised error', hdrs={}, fp=None)
+        else:
+            my_stream = BytesIO()
+            my_stream.write(b'{"ok": "true"}')
+            my_stream.seek(0)
+            return my_stream
+
+    request.urlopen = fake_urlopen
+    # stub done
+
+    code = 403
+    logger.warning('user blocked this bot')
+    assert 'HTTP Error 403' in caplog.text
+    assert not handler.cache[user_id]
+    assert not handler.is_watching
+
+    code = 500
+    handler.check_interval = 0.5
+    logger.error('server error')
+    assert handler.cache[user_id]
+    assert handler.is_watching
+    code = 200
+    time.sleep(1.5)
+    assert not handler.cache[user_id]
+    assert 'HTTP Error 500' in caplog.text
+    assert 'watcher starts' in caplog.text
+    assert 'found unsent messages' in caplog.text
+    assert 'watcher finished' in caplog.text

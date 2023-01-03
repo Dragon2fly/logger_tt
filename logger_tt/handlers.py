@@ -1,5 +1,8 @@
 import logging
 import time
+import json
+from urllib import request, parse, error
+from collections import deque
 from threading import Thread
 from datetime import datetime
 
@@ -69,3 +72,110 @@ class StreamHandlerWithBuffer(logging.StreamHandler):
                 self.release()
 
 
+class TelegramHandler(logging.Handler):
+    def __init__(self, token='', unique_ids=None, debug=False, check_interval=300):
+        super().__init__()
+        self._unique_ids = []       # type: list[tuple[int, int]|int]
+        self.set_unique_ids(unique_ids)
+
+        self._url = f"https://api.telegram.org/bot{token}/sendMessage"
+        self.feedback = {x: {} for x in unique_ids}
+        self.cache = {x: deque(maxlen=100) for x in unique_ids}
+
+        # back ground thread resends the log if network error previously
+        self.debug = debug
+        self.check_interval = check_interval
+        self.watcher = Thread(target=self.watcher, daemon=True)
+        self.is_watching = False
+
+    def _get_full_url(self, unique_id, text):
+        if type(unique_id) in [int, str]:
+            # unique_id is chat_id only
+            url = f'{self._url}?chat_id={unique_id}&text={text}'
+        else:
+            # a tuple of chat_id, message_thread_id
+            chat_id, message_thread_id = unique_id
+            url = f'{self._url}?chat_id={chat_id}&message_thread_id={message_thread_id}&text={text}'
+        return url
+
+    def set_bot_token(self, token: str):
+        self._url = f"https://api.telegram.org/bot{token}/sendMessage"
+
+    def set_unique_ids(self, *ids):
+        if not ids:
+            self._unique_ids = []
+        elif len(ids) == 1 and type(ids[0]) in [list, tuple]:
+            self._unique_ids = ids[0]
+        else:
+            self._unique_ids = [ids]
+
+    def send(self):
+        for _id_ in self._unique_ids:
+            while self.cache[_id_]:
+                msg_out = self.cache[_id_][0]
+                full_url = self._get_full_url(_id_, msg_out)
+
+                try:
+                    with request.urlopen(full_url) as fi:
+                        data = fi.read()
+                    self.feedback[_id_] = json.loads(data.decode())
+
+                    # remove from the queue after sending successfully
+                    self.cache[_id_].popleft()
+
+                except json.JSONDecodeError as e:
+                    self.feedback[_id_] = {'error': str(e), 'data': data}
+
+                except error.HTTPError as e:
+                    if e.code == 403:
+                        # user blocked the bot
+                        logging.getLogger().error(e)
+
+                        # remove msg
+                        self.cache[_id_].popleft()
+                        break
+                    else:
+                        # resend this msg later
+                        logging.getLogger().error(e)
+                        break
+
+                except Exception as e:
+                    # resend this later
+                    logging.getLogger().exception(e)
+                    break
+
+    def emit(self, record):
+        msg = self.format(record)
+
+        self.acquire()
+        # cache msg in case of sending failure
+        for _id_ in self._unique_ids:
+            if getattr(record, 'unique_id', _id_):
+                # redirect msg to appropriate cache only if unique_id context is provided
+                self.cache[_id_].append(parse.quote_plus(msg))
+        self.send()
+        self.release()
+
+        if any(self.cache.values()) and not self.is_watching:
+            self.is_watching = True
+            self.watcher.start()
+
+    def watcher(self):
+        """
+        If buffer_time is used, this method will flush the buffer
+        after every buffer_time seconds has passed.
+        """
+        if self.debug:
+            logging.getLogger().debug(f'TelegramHandler watcher starts: {datetime.now()}')
+        while True:
+            time.sleep(self.check_interval)
+            if any(self.cache.values()):
+                logging.getLogger().debug(f'TelegramHandler found unsent messages: {datetime.now()}')
+                self.acquire()
+                self.send()
+                self.release()
+            else:
+                logging.getLogger().debug(f'TelegramHandler watcher finished: {datetime.now()}')
+                break
+
+        self.is_watching = False

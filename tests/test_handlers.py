@@ -72,12 +72,12 @@ def test_handler_with_buffer_lines(caplog, threshold):
                 assert len(logs) == 2*threshold, "Total log lines should equal threshold * 2"
 
 
-# @pytest.mark.skip('Uncomment this line. Add your bot token and chat_id/(group_id, topic) to test. Already tested!')
-# @pytest.mark.parametrize('unique_id', [123456789,
-#                                        (-1234567890123, 2),
-#                                        (-1234567890123, 4)])
+@pytest.mark.skip('Uncomment this line. Add your bot token and chat_id/(group_id, topic) to test. Already tested!')
+@pytest.mark.parametrize('unique_id', [123456789,
+                                       (-1234567890123, 2),
+                                       (-1234567890123, 4)])
 def test_telegram_handler_basic(unique_id):
-    bot_token = '1700505955:AAGTs3Syl3sRBzOq2jwjgsp9EsS8WqjExpo'
+    bot_token = 'your bot token here'
     logger = getLogger('test telegram')
     handler = TelegramHandler(token=bot_token, unique_ids=[unique_id])
     formatter = Formatter(fmt="[%(asctime)s.%(msecs)03d] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")

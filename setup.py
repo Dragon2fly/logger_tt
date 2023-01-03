@@ -5,7 +5,7 @@ with open('README.md', encoding='utf8') as fi:
 
 setup(
     name='logger_tt',
-    version='1.7.0',
+    version='1.7.1',
     packages=['logger_tt'],
     url='https://github.com/Dragon2fly/logger_tt',
     package_data={'': ['log_config.json', 'log_config.yaml']},
@@ -28,6 +28,7 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
         'Operating System :: OS Independent',
         'Topic :: System :: Hardware :: Symmetric Multi-processing',
         'Topic :: System :: Logging',

@@ -886,6 +886,14 @@ logger_tt:
 ```
 
 # Changelog
+## 1.7.1
+* Fixed: exception raised while handling another exception is now show correctly (thank ZeroRin). 
+* New functionality: Added `TelegramHandler`. Now you can send log directly to telegram user/group.
+* Usability: 
+  * Added NOTICE level. You can do `logger.notice("your message")`.
+  * Add set/remove `context injector` method. 
+    You can add additional information to the log record before it is actually handled. 
+
 ## 1.7.0
 * Fixed: 
   * multiprocessing: log file rollover fails as child process keep opening the file.

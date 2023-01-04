@@ -236,9 +236,7 @@ def test_replace_handler_stream():
 def test_add_logging_level():
 
     with setup_logging() as log_config:
-        from logger_tt import add_logging_level
-
-        add_logging_level('NOTICE2', logging.INFO+1)
+        log_config.add_logging_level('NOTICE2', logging.INFO+1)
         my_logger.notice2('This is the added level')
 
     log_data = log.read_text()

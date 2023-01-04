@@ -50,6 +50,9 @@ class LogConfig:
         # use context injector
         self.__middle_handlers = []
 
+        # track added logging level to undo later
+        self.__added_logging_level = {}
+
     @property
     def initialized(self):
         return self.__initialized
@@ -195,6 +198,52 @@ class LogConfig:
         else:
             sys.stdout = self.original_stdout
 
+    def set_context_injector(self, injector):
+        for handler in self.__middle_handlers:
+            handler.addFilter(injector)
+
+    def remove_context_injector(self, injector):
+        for handler in self.__middle_handlers:
+            handler.removeFilter(injector)
+
+    def add_logging_level(self, level_name, level_num, method_name=None):
+        # inspired by @Mad Physicist
+        # https://stackoverflow.com/a/35804945/3655984
+        if not method_name:
+            method_name = level_name.lower()
+
+        if hasattr(logging, level_name):
+            raise ValueError(f'Re-define level {level_name} in logging module')
+        if hasattr(logging, method_name):
+            raise ValueError(f'Re-define method {method_name} in logging module')
+        if hasattr(logging.getLoggerClass(), method_name):
+            raise ValueError(f'Re-define {method_name} in Logger class')
+
+        def logForLevel(self, message, *args, **kwargs):
+            if self.isEnabledFor(level_num):
+                self._log(level_num, message, args, **kwargs)
+
+        def logToRoot(message, *args, **kwargs):
+            logging.log(level_num, message, *args, **kwargs)
+
+        logging.addLevelName(level_num, level_name)
+        setattr(logging, level_name, level_num)
+        setattr(logging.getLoggerClass(), method_name, logForLevel)
+        setattr(logging, method_name, logToRoot)
+
+        self.__added_logging_level[level_name] = (method_name, level_num)
+
+    def remove_logging_level(self, level_name):
+        if level_name in self.__added_logging_level:
+            method_name, level_num = self.__added_logging_level[level_name]
+            delattr(logging, level_name)
+            delattr(logging.getLoggerClass(), method_name)
+            delattr(logging, method_name)
+
+            del logging._levelToName[level_num]
+            del logging._nameToLevel[level_name]
+            del self.__added_logging_level[level_name]
+
     def __enter__(self):
         """This is to simplify pytest test case"""
         return self
@@ -214,13 +263,10 @@ class LogConfig:
                 if isinstance(handler, logging.FileHandler):
                     handler.close()
 
-    def set_context_injector(self, injector):
-        for handler in self.__middle_handlers:
-            handler.addFilter(injector)
+        for custom_level in list(self.__added_logging_level):
+            self.remove_logging_level(custom_level)
 
-    def remove_context_injector(self, injector):
-        for handler in self.__middle_handlers:
-            handler.removeFilter(injector)
+        self.__initialized = False
 
 
 class LogRecordStreamHandler(socketserver.StreamRequestHandler):

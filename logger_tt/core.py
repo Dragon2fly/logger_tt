@@ -68,7 +68,7 @@ class LogConfig:
         # suppress other logger
         level = odict.get('suppress_level_below', 'WARNING')
         if type(level) is str:
-            if level.upper() not in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
+            if level.upper() not in ['DEBUG', 'INFO', 'NOTICE', 'WARNING', 'ERROR', 'CRITICAL']:
                 raise ValueError(f'"level" string is incorrect: {level}')
             level = getattr(logging, level.upper())
         self.suppress_level_below = level

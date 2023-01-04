@@ -256,15 +256,19 @@ def parse_full_context(identifiers, frame) -> list:
                for k, v in local_var.items() if k in other_local_var]
     return txt
 
-def analyze_exception_recur(e:BaseException, full_context: int, limit_line_length: int, analyze_raise_statement: bool, text:str='') -> str:
+
+def analyze_exception_recur(e: BaseException, full_context: int, limit_line_length: int, analyze_raise_statement: bool,
+                            text: str = '') -> str:
     cause = e.__cause__ or e.__context__
     if cause:
-        text = analyze_exception_recur(cause, full_context, limit_line_length, analyze_raise_statement,text) \
-             + '\nDuring handling of the above exception, another exception occurred:\n\n'
-    text += ("Traceback (most recent call last):\n" \
-         + analyze_frame(e.__traceback__, full_context, limit_line_length, analyze_raise_statement) \
-         + f'{type(e).__name__}: {e}\n')
+        text = analyze_exception_recur(cause, full_context, limit_line_length, analyze_raise_statement, text)
+        text += '\nDuring handling of the above exception, another exception occurred:\n\n'
+
+    text += ("Traceback (most recent call last):\n"
+             + analyze_frame(e.__traceback__, full_context, limit_line_length, analyze_raise_statement)
+             + f'{type(e).__name__}: {e}\n')
     return text
+
 
 def analyze_frame(trace_back, full_context: int, limit_line_length: int, analyze_raise_statement: bool) -> str:
     """

@@ -6,7 +6,7 @@ from .core import LogConfig, DefaultFormatter
 
 
 __author__ = "Duc Tin"
-__all__ = ['setup_logging', 'logging_disabled', 'getLogger', 'logger']
+__all__ = ['setup_logging', 'logging_disabled', 'getLogger', 'logger', 'add_logging_level']
 
 
 logger: logging.Logger
@@ -24,3 +24,7 @@ def setup_logging(config_path: str = "", log_path: str = "",
                   analyze_raise_statement: bool = False,
                   host: str = None,
                   port: int = None) -> LogConfig: ...
+
+
+def add_logging_level(level_name: str, level_num: int, method_name: str=None):
+    ...

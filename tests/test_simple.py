@@ -1,8 +1,10 @@
 import logging
 import re
 import sys
+import time
 from logging import getLogger
 from pathlib import Path
+from io import StringIO
 
 import pytest
 from logger_tt import setup_logging, logging_disabled, logger as my_logger
@@ -206,5 +208,38 @@ def test_context_injector():
         log_config.set_context_injector(injector)
         my_logger.info('function as Filter')
 
+        log_config.remove_context_injector(injector)
+        my_logger.error('Injector is removed')
+
     log_data = log.read_text()
     assert "injected text" in log_data
+    assert "Injector is removed" in log_data and log_data.count('injected text') == 1
+
+
+def test_replace_handler_stream():
+    my_stream = StringIO()
+    with setup_logging() as log_config:
+        log_config.replace_handler_stream(1, my_stream)
+        my_logger.info('Stream is replaced')
+
+        # wait for other thread to flush the log
+        time.sleep(0.5)
+
+        # read the stream inside the with block
+        # while it is not closed
+        my_stream.seek(0)
+        data = my_stream.read()
+
+    assert 'Stream is replaced' in data
+
+
+def test_add_logging_level():
+
+    with setup_logging() as log_config:
+        from logger_tt import add_logging_level
+
+        add_logging_level('NOTICE2', logging.INFO+1)
+        my_logger.notice2('This is the added level')
+
+    log_data = log.read_text()
+    assert re.search("NOTICE2.*This is the added level", log_data)

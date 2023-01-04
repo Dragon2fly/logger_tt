@@ -30,6 +30,7 @@ def test_handler_with_buffer_time(caplog, threshold):
         my_stream.seek(0)
         logs = my_stream.read()
 
+        time.sleep(0.02)
         data = re.findall(r'StreamHandlerWithBuffer.*\n', logs)
         start_time = datetime.datetime.strptime(data[0].strip().split(': ')[1], '%Y-%m-%d %H:%M:%S.%f')
         flush1_time = datetime.datetime.strptime(data[1].strip().split(': ')[1], '%Y-%m-%d %H:%M:%S.%f')

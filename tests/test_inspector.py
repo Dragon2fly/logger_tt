@@ -235,3 +235,28 @@ def test_analyze_raise_statement(analyze, result):
         assert result in data
     else:
         assert result not in data
+
+
+@pytest.mark.skipif(sys.version_info < (3, 11), reason="traceback annotation is only supported on py 3.11+")
+def test_py_311():
+    cmd = [sys.executable, "exception_main_py311.py"]
+    run(cmd)
+
+    expected_traceback = r"""Traceback (most recent call last):
+  File "D:\pycharm_projects\logger_tt\tests\exception_main_py311.py", line 30, in <module>
+    lel3(xx)
+
+  File "D:\pycharm_projects\logger_tt\tests\exception_main_py311.py", line 25, in lel3
+    return lel2(x) / 23
+           ^^^^^^^
+
+  File "D:\pycharm_projects\logger_tt\tests\exception_main_py311.py", line 21, in lel2
+    return 25 + lel(x) + lel(x)
+                ^^^^^^
+
+  File "D:\pycharm_projects\logger_tt\tests\exception_main_py311.py", line 17, in lel
+    return 1 + foo(a, b, c=x['z']['x']['y']['z']['y'], d=e)
+                           ~~~~~~~~~~~~~~~~^^^^^"""
+
+    data = log.read_text()
+    assert expected_traceback in data

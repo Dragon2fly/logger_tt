@@ -6,10 +6,18 @@ import tokenize
 import linecache
 from io import StringIO
 from contextlib import contextmanager
-from traceback import StackSummary, walk_tb
 
 ID_PATTERN = re.compile(r'([a-zA-Z_][a-zA-Z_0-9.]*)')
 MEM_PATTERN = re.compile(r'<.*object at 0x[0-9A-Fa-f]+>')
+
+
+try:
+    # python 3.11.0, traceback indicator
+    from traceback import StackSummary, _walk_tb_with_full_positions as walk_tb
+    stack_summary_extract = StackSummary._extract_from_extended_frame_gen
+except ImportError as e:
+    from traceback import StackSummary, walk_tb
+    stack_summary_extract = StackSummary.extract
 
 
 def get_recur_attr(obj, attr: str):
@@ -192,13 +200,23 @@ def get_traceback_depth(trace_back) -> int:
 def get_basic_exception_info(summary) -> tuple:
     """Return a normal 2 lines of of an exception and a full python statement in case of multiline"""
 
+    # no indicator
     line = summary.line
     if not is_full_statement(summary.line):
         line = get_full_statement(summary.filename, summary.lineno)
         line = '    '.join(line)
 
-    txt = [f'  File "{summary.filename}", line {summary.lineno}, in {summary.name}',
-           f'    {line}']
+    if not getattr(summary, 'colno', None):
+        txt = [f'  File "{summary.filename}", line {summary.lineno}, in {summary.name}',
+               f'    {line}']
+    else:
+        # indicator
+        _locals = summary.locals
+        summary.locals = {}
+        data = StackSummary.format_frame_summary(None, summary)
+        txt = data.splitlines()
+        summary.locals = _locals
+
     return txt, line
 
 
@@ -292,7 +310,7 @@ def analyze_frame(trace_back, full_context: int, limit_line_length: int, analyze
         for idx, obj in enumerate(walk_tb(trace_back)):
             frame, _ = obj
 
-            summary = StackSummary.extract([obj], capture_locals=True)[0]
+            summary = stack_summary_extract([obj], capture_locals=True)[0]
             txt, line = get_basic_exception_info(summary)
 
             # todo: dump all level to different file?

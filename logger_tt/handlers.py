@@ -3,7 +3,7 @@ import time
 import json
 from urllib import request, parse, error
 from collections import deque
-from threading import Thread
+from threading import Thread, Event
 from datetime import datetime
 
 
@@ -17,9 +17,13 @@ class StreamHandlerWithBuffer(logging.StreamHandler):
         self.buffer = []
         self.debug = debug
 
+        self._stop_event = Event()
         if self.buffer_time:
             watcher = Thread(target=self.watcher, daemon=True)
             watcher.start()
+
+    def close(self) -> None:
+        self._stop_event.set()
 
     def export(self):
         """Actual writing data out to the stream"""
@@ -64,7 +68,7 @@ class StreamHandlerWithBuffer(logging.StreamHandler):
         """
         if self.debug:
             self.buffer.append(f'StreamHandlerWithBuffer watcher starts: {datetime.now()}')
-        while True:
+        while not self._stop_event.is_set():
             time.sleep(self.buffer_time)
             if self.buffer:
                 self.acquire()
@@ -85,8 +89,16 @@ class TelegramHandler(logging.Handler):
         # back ground thread resends the log if network error previously
         self.debug = debug
         self.check_interval = check_interval
-        self.watcher = Thread(target=self.watcher, daemon=True)
-        self.is_watching = False
+        self._stop_event = Event()
+        watcher_thread = Thread(target=self.watcher, daemon=True)
+        watcher_thread.start()
+
+        # reduce sending duplicated log
+        self.last_record = None
+        self.dup_count = 0
+
+    def close(self) -> None:
+        self._stop_event.set()
 
     def _get_full_url(self, unique_id, text):
         if type(unique_id) in [int, str]:
@@ -144,38 +156,67 @@ class TelegramHandler(logging.Handler):
                     logging.getLogger().exception(e)
                     break
 
-    def emit(self, record):
-        msg = self.format(record)
+    def _is_duplicated_record(self, record):
+        if not self.last_record:
+            self.last_record = record
+            self.dup_count = 0
+            return False
 
-        self.acquire()
+        for attr in 'msg name levelno pathname lineno args funcName'.split():
+            if getattr(record, attr) != getattr(self.last_record, attr):
+                return False
+        else:
+            return True
+
+    def _naive_emit(self, record, remark=''):
         # cache msg in case of sending failure
+        msg = self.format(record) + remark
         for _id_ in self._unique_ids:
             if getattr(record, 'unique_id', _id_):
                 # redirect msg to appropriate cache only if unique_id context is provided
                 self.cache[_id_].append(parse.quote_plus(msg))
         self.send()
-        self.release()
 
-        if any(self.cache.values()) and not self.is_watching:
-            self.is_watching = True
-            self.watcher.start()
+    def emit(self, record):
+        self.acquire()
+
+        if self._is_duplicated_record(record):
+            self.dup_count += 1
+
+        elif self.dup_count:
+            # changed to new record, no longer duplicated
+            # send last msg, then send this time msg
+            self._naive_emit(self.last_record, remark=f'\n (Message repeated {self.dup_count} times)')
+            self._naive_emit(record)
+
+            self.last_record = record
+            self.dup_count = 0
+        else:
+            # last sent record is not duplicated
+            self._naive_emit(record)
+            self.last_record = record
+
+        self.release()
 
     def watcher(self):
         """
-        If buffer_time is used, this method will flush the buffer
-        after every buffer_time seconds has passed.
+        This method will resend the failed messages if they haven't been sent in emit
         """
         if self.debug:
             logging.getLogger().debug(f'TelegramHandler watcher starts: {datetime.now()}')
-        while True:
+
+        while not self._stop_event.is_set():
             time.sleep(self.check_interval)
             if any(self.cache.values()):
-                logging.getLogger().debug(f'TelegramHandler found unsent messages: {datetime.now()}')
+                if self.debug:
+                    logging.getLogger().debug(f'TelegramHandler found unsent messages: {datetime.now()}')
                 self.acquire()
                 self.send()
                 self.release()
-            else:
-                logging.getLogger().debug(f'TelegramHandler watcher finished: {datetime.now()}')
-                break
-
-        self.is_watching = False
+            elif self.dup_count > 1:
+                if self.debug:
+                    logging.getLogger().debug(f'TelegramHandler watcher emit duplicated msg with: {datetime.now()}')
+                self.acquire()
+                self._naive_emit(self.last_record, f'\n (Message repeated {self.dup_count} times)')
+                self.dup_count = 0
+                self.release()

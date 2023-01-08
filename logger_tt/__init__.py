@@ -58,7 +58,7 @@ def thread_run_with_exception_logging(self):
         del self._target, self._args, self._kwargs
 
 
-def ensure_path(config: dict[str,dict[str,dict]], override_log_paths: Union[str,dict] = ''):
+def ensure_path(config: Dict[str, Dict[str, dict]], override_log_paths: Union[str, dict] = ''):
     """
     ensure log path exists
 

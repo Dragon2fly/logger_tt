@@ -1,13 +1,15 @@
-import sys
-import logging
 import json
+import logging
+import sys
 import threading
-from pathlib import Path
-from logging.config import dictConfig
 from logging import getLogger
-from .inspector import analyze_frame, logging_disabled, analyze_exception_recur
-from .core import LogConfig, DefaultFormatter
+from logging.config import dictConfig
 from multiprocessing import current_process
+from pathlib import Path
+from typing import *
+
+from .core import DefaultFormatter, LogConfig
+from .inspector import analyze_exception_recur, analyze_frame, logging_disabled
 
 __author__ = "Duc Tin"
 __all__ = ['setup_logging', 'logging_disabled', 'getLogger', 'logger', 'add_logging_level']
@@ -56,13 +58,24 @@ def thread_run_with_exception_logging(self):
         del self._target, self._args, self._kwargs
 
 
-def ensure_path(config: dict, override_log_path: str = ""):
-    """ensure log path exists"""
-    for handler in config['handlers'].values():
+def ensure_path(config: dict[str,dict[str,dict]], override_log_paths: Union[str,dict] = ''):
+    """
+    ensure log path exists
+
+    if `override_log_paths` is `str`, overwrite filename for all handlers with this path
+    
+    if `override_log_paths` is `dict` in the form of `{handler_name: log_path, ...}`,
+    overwrite filename for respective handler with the dict value
+    """
+    for handler_name, handler in config['handlers'].items():
         filename = handler.get('filename')
         if not filename:
             continue
-        filename = override_log_path or filename
+        if isinstance(override_log_paths, str):
+            override = override_log_paths
+        else:
+            override = override_log_paths.get(handler_name)
+        filename = override or filename
         handler['filename'] = filename
         log_path = Path(filename).parent
         log_path.mkdir(parents=True, exist_ok=True)

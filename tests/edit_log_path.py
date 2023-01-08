@@ -1,11 +1,12 @@
 import sys
 from logging import getLogger
+from typing import *
 
 from logger_tt import logger, setup_logging
 
 __author__ = "ZeroRin"
 
-def modify_log_files(log_path:str|dict=''):
+def modify_log_files(log_path: Union[str,dict]=''):
     print(log_path)
     setup_logging(config_path='edit_log_path.json',log_path=log_path)
 

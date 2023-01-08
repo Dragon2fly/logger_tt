@@ -6,6 +6,7 @@ from logging import getLogger
 from logging.config import dictConfig
 from multiprocessing import current_process
 from pathlib import Path
+from typing import *
 
 from .core import DefaultFormatter, LogConfig
 from .inspector import analyze_exception_recur, analyze_frame, logging_disabled
@@ -57,17 +58,23 @@ def thread_run_with_exception_logging(self):
         del self._target, self._args, self._kwargs
 
 
-def ensure_path(config: dict[str,dict[str,dict]], override_log_paths: str|dict = ''):
-    """ensure log path exists"""
+def ensure_path(config: dict[str,dict[str,dict]], override_log_paths: Union[str,dict] = ''):
+    """
+    ensure log path exists
+
+    if `override_log_paths` is `str`, overwrite filename for all handlers with this path
+    
+    if `override_log_paths` is `dict` in the form of `{handler_name: log_path, ...}`,
+    overwrite filename for respective handler with the dict value
+    """
     for handler_name, handler in config['handlers'].items():
         filename = handler.get('filename')
         if not filename:
             continue
-        override = (
-            override_log_paths 
-            if isinstance(override_log_paths, str)
-            else override_log_paths.get(handler_name)
-        )
+        if isinstance(override_log_paths, str):
+            override = override_log_paths
+        else:
+            override = override_log_paths.get(handler_name)
         filename = override or filename
         handler['filename'] = filename
         log_path = Path(filename).parent

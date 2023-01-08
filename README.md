@@ -748,10 +748,10 @@ window.close()
    This handler uses web API, so there is no third-party dependency.
    
    To set up this handler, you need the following information:
-     * Your bot `token`: if you don't have one, create a new bot with https://t.me/botfather.
-     * Destination `unique_id`: a `chat_id` (user id or group id) and optionally 
-       `message_thread_id`of a topic in that group. You can chat with or add @RawDataBot to your group to get these ids.
-     * Log level to be sent: above a level or only a specific level.
+   * Your bot `token`: if you don't have one, create a new bot with https://t.me/botfather.
+   * Destination `unique_id`: a `chat_id` (user id or group id) and optionally 
+     `message_thread_id`of a topic in that group. You can chat with or add @RawDataBot to your group to get these ids.
+   * Log level to be sent: above a level or only a specific level.
    
      
    From here you have 2 options, put the `token` and `unique_id` directly in the config file or in the environment.

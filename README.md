@@ -149,9 +149,9 @@ Parameter with the same name passed in `setup_logging` function will override th
    ```python
    setup_logging(log_path='new/path/to/your_log.txt')
    ```
-   If you have multiple handlers and want each of them log to different destination, 
+   If you have multiple handlers and want each of them log to different destinations, 
    you can pass in a dict of `"handler_name": "log_path"`. 
-   The handler names must match what defined in the config file.   
+   The handler names must match what is defined in the config file.   
 
    ```python
    setup_logging(log_path={'error_file_handler': 'log/error.txt',
@@ -743,14 +743,14 @@ window.close()
    see the difference while clicking the `stop` button for yourself.
 
 ### 12. Telegram Handler:
-   This handler enables you to send log message directly to telegram users or groups. 
+   This handler enables you to send log messages directly to telegram users or groups. 
    For telegram groups, you can specify a certain `topic` to send to, too.
-   This handler uses web api, so there is no third party dependency.
+   This handler uses web API, so there is no third-party dependency.
    
    To set up this handler, you need the following information:
      * Your bot `token`: if you don't have one, create a new bot with https://t.me/botfather.
      * Destination `unique_id`: a `chat_id` (user id or group id) and optionally 
-       `message_thread_id`of a topic in that group. You can chat to or add @RawDataBot to your group to get these ids.
+       `message_thread_id`of a topic in that group. You can chat with or add @RawDataBot to your group to get these ids.
      * Log level to be sent: above a level or only a specific level.
    
      
@@ -760,11 +760,11 @@ window.close()
    * token: `TELEGRAM_BOT_LOG_TOKEN`
    * unique_ids: `TELEGRAM_BOT_LOG_DEST`
    
-   These above name is specified in `env_token_key` and `env_unique_ids_key` in the default config file. 
+   These above names are specified in `env_token_key` and `env_unique_ids_key` in the default config file. 
    You may edit them to suit your environment.
    
    For the values, `unique_ids` accepts the format `[name:]chat_id[@message_thread_id]`, 
-   multiple values must be separated by semicolon (space after semicolon will be ignored). 
+   multiple values must be separated by a semicolon (space after a semicolon will be ignored). 
    Which means the following examples are possible:
    * a single chat_id: `123456789` (user id) or `-987654321` (group id)
    * a specified topic within a group: `-987654321@2`
@@ -790,8 +790,8 @@ window.close()
    ```
 
    From here, it should already work. 
-   If you need certain messages go to a certain people/group, beside of adding a new handler, 
-   you can add a filter that add `dest_name` attribute to the log `record`. 
+   If you need certain messages to go to a certain people/group, besides adding a new handler, 
+   you can add a filter that adds the `dest_name` attribute to the log `record`. 
    
 ```python
 def telegram_filter(record):

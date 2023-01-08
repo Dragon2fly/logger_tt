@@ -1,4 +1,5 @@
 import datetime
+import os
 import re
 import time
 
@@ -81,13 +82,16 @@ def test_handler_with_buffer_lines(caplog, threshold):
 
 
 @pytest.mark.skip('Uncomment this line. Add your bot token and chat_id/(group_id, topic) to test. Already tested!')
-@pytest.mark.parametrize('unique_id', [123456789,
-                                       (-1234567890123, 2),
-                                       (-1234567890123, 4)])
+@pytest.mark.parametrize('unique_id', ['123456789',
+                                       '-1234567890123@2',
+                                       '-1234567890123@2; -1234567890123@4'
+                                       ])
 def test_telegram_handler_basic(unique_id):
     bot_token = 'your bot token here'
+    os.environ['TELEGRAM_BOT_LOG_TOKEN'] = bot_token
+    os.environ['TELEGRAM_BOT_LOG_DEST'] = unique_id
     logger = getLogger('test telegram')
-    handler = TelegramHandler(token=bot_token, unique_ids=[unique_id])
+    handler = TelegramHandler(env_token_key='TELEGRAM_BOT_LOG_TOKEN', env_unique_ids_key='TELEGRAM_BOT_LOG_DEST')
     formatter = Formatter(fmt="[%(asctime)s.%(msecs)03d] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -109,9 +113,9 @@ def test_telegram_handler_basic(unique_id):
 
 def test_telegram_handler_error(caplog):
     bot_token = ''
-    user_id = 123456789
+    user_id = '123456789'
     logger = getLogger('test telegram 0')
-    handler = TelegramHandler(token=bot_token, unique_ids=[user_id], debug=True, check_interval=0.5)
+    handler = TelegramHandler(token=bot_token, unique_ids=user_id, debug=True, check_interval=0.5)
     formatter = Formatter(fmt="[%(asctime)s.%(msecs)03d] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -158,9 +162,9 @@ def test_telegram_handler_error(caplog):
 
 def test_telegram_handler_repeated_msg_continuous(caplog):
     bot_token = ''
-    user_id = 123456789
+    user_id = '123456789'
     logger = getLogger('test telegram 1')
-    handler = TelegramHandler(token=bot_token, unique_ids=[user_id], debug=True, check_interval=1)
+    handler = TelegramHandler(token=bot_token, unique_ids=user_id, debug=True, check_interval=1)
     formatter = Formatter(fmt="[%(asctime)s.%(msecs)03d] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -200,9 +204,9 @@ def test_telegram_handler_repeated_msg_continuous(caplog):
 
 def test_telegram_handler_repeated_msg_then_change(caplog):
     bot_token = ''
-    user_id = 123456789
+    user_id = '123456789'
     logger = getLogger('test telegram 2')
-    handler = TelegramHandler(token=bot_token, unique_ids=[user_id], debug=True, check_interval=1)
+    handler = TelegramHandler(token=bot_token, unique_ids=user_id, debug=True, check_interval=1)
     formatter = Formatter(fmt="[%(asctime)s.%(msecs)03d] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     handler.setFormatter(formatter)
     logger.addHandler(handler)

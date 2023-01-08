@@ -46,10 +46,10 @@
       "level": "NOTICE",
       "formatter": "brief",
       "debug": false,
-      "token": "your bot token, can be set in code (fetch from environ) for better security",
-      "unique_ids": [
-        "list of chat_id/tuple(group_id, topic_index)"
-      ]
+      "token": "your bot token here or set the below env key to fetch from environ for better security",
+      "unique_ids": "semicolon separated of [name:]chat_id[@message_thread_id]",
+      "env_token_key": "TELEGRAM_BOT_LOG_TOKEN",
+      "env_unique_ids_key": "TELEGRAM_BOT_LOG_DEST"
     }
   },
 

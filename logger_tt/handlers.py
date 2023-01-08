@@ -1,5 +1,6 @@
 import logging
 import time
+import os
 import json
 from urllib import request, parse, error
 from collections import deque
@@ -77,14 +78,21 @@ class StreamHandlerWithBuffer(logging.StreamHandler):
 
 
 class TelegramHandler(logging.Handler):
-    def __init__(self, token='', unique_ids=None, debug=False, check_interval=300):
+    def __init__(self, token='', unique_ids=None, env_token_key='', env_unique_ids_key='',
+                 debug=False, check_interval=300):
         super().__init__()
-        self._unique_ids = []       # type: list[tuple[int, int]|int]
+
+        if env_token_key:
+            token = os.environ.get(env_token_key, None) or token
+        if env_unique_ids_key:
+            unique_ids = os.environ.get(env_unique_ids_key, None) or unique_ids
+
+        self._unique_ids = []       # type: list[str]
         self.set_unique_ids(unique_ids)
 
         self._url = f"https://api.telegram.org/bot{token}/sendMessage"
-        self.feedback = {x: {} for x in unique_ids}
-        self.cache = {x: deque(maxlen=100) for x in unique_ids}
+        self.feedback = {x: {} for x in self._unique_ids}
+        self.cache = {x: deque(maxlen=100) for x in self._unique_ids}
 
         # back ground thread resends the log if network error previously
         self.debug = debug
@@ -100,26 +108,35 @@ class TelegramHandler(logging.Handler):
     def close(self) -> None:
         self._stop_event.set()
 
-    def _get_full_url(self, unique_id, text):
-        if type(unique_id) in [int, str]:
-            # unique_id is chat_id only
-            url = f'{self._url}?chat_id={unique_id}&text={text}'
-        else:
-            # a tuple of chat_id, message_thread_id
-            chat_id, message_thread_id = unique_id
+    def _get_full_url(self, unique_id: str, text: str):
+        # remove name/label if presence
+        unique_id = unique_id.split(':')[-1]
+
+        # add message_thread_id if presence
+        if '@' in unique_id:
+            # group_id and topic index is specified
+            chat_id, message_thread_id = unique_id.split('@')
             url = f'{self._url}?chat_id={chat_id}&message_thread_id={message_thread_id}&text={text}'
+        else:
+            # just chat_id only
+            url = f'{self._url}?chat_id={unique_id}&text={text}'
+
         return url
 
     def set_bot_token(self, token: str):
         self._url = f"https://api.telegram.org/bot{token}/sendMessage"
 
-    def set_unique_ids(self, *ids):
+    def set_unique_ids(self, ids):
         if not ids:
             self._unique_ids = []
-        elif len(ids) == 1 and type(ids[0]) in [list, tuple]:
-            self._unique_ids = ids[0]
+        elif type(ids) is str:
+            # str from environment variable
+            self._unique_ids = [x.strip() for x in ids.split(';')]
+        elif type(ids) is int:
+            # from config, one value
+            self._unique_ids = [str(ids)]
         else:
-            self._unique_ids = [ids]
+            raise TypeError(f'Expected str or int but got type: {type(ids)}')
 
     def send(self):
         for _id_ in self._unique_ids:
@@ -171,9 +188,17 @@ class TelegramHandler(logging.Handler):
     def _naive_emit(self, record, remark=''):
         # cache msg in case of sending failure
         msg = self.format(record) + remark
-        for _id_ in self._unique_ids:
-            if getattr(record, 'unique_id', _id_):
-                # redirect msg to appropriate cache only if unique_id context is provided
+
+        # redirect msg to appropriate cache
+        if hasattr(record, 'dest_name'):
+            dest_id = next(filter(lambda x: x.startswith(f'{record.dest_name}:'), self._unique_ids))
+            if dest_id:
+                self.cache[dest_id].append(parse.quote_plus(msg))
+            else:
+                # do nothing
+                pass
+        else:
+            for _id_ in self._unique_ids:
                 self.cache[_id_].append(parse.quote_plus(msg))
         self.send()
 

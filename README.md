@@ -994,13 +994,13 @@ logger_tt:
 ## 1.7.1
 * Fixed: exception raised while handling another exception is now shown correctly (thank ZeroRin). 
 * New functionality: 
-  * Added `TelegramHandler`. Now you can send log directly to telegram users/groups.
+  * Added `TelegramHandler`. Now you can send logs directly to telegram users/groups.
   * Support Python 3.11 `Fine-grained error locations` in tracebacks.
 * Usability: 
   * Added level NOTICE = INFO + 5. You can do `logger.notice("your message")`.
-  * Add set/remove `context injector` method. 
+  * Add set/remove `context injector` methods. 
     You can add additional information to the log record before it is actually handled. 
-    Refer the `TelegramHandler` for usage sample.
+    Refer to the `TelegramHandler` for a usage sample.
   * You can now set different log paths for different handlers by passing a dict to `setup_logging` (thank ZeroRin). 
 
 ## 1.7.0

@@ -994,6 +994,9 @@ logger_tt:
 ```
 
 # Changelog
+## 1.7.2:
+* Fixed: TelegramHandler crashed instead of ignoring the unregistered `unique_id`
+
 ## 1.7.1
 * Fixed: exception raised while handling another exception is now shown correctly (thank ZeroRin). 
 * New functionality: 

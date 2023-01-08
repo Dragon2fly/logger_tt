@@ -22,6 +22,7 @@ Even multiprocessing logging becomes a breeze.
   * [Limit traceback line length](#9-limit-traceback-lines-length)
   * [Analyze `raise` exception line](#10-analyze-raise-exception-line)
   * [StreamHandler with buffer](#11-streamhandler-with-buffer)
+  * [TelegramHandler](#12-telegram-handler)
     
 * [Sample config](#sample-config)
   * [YAML format](#1-yaml-format)
@@ -147,6 +148,16 @@ Parameter with the same name passed in `setup_logging` function will override th
     
    ```python
    setup_logging(log_path='new/path/to/your_log.txt')
+   ```
+   If you have multiple handlers and want each of them log to different destination, 
+   you can pass in a dict of `"handler_name": "log_path"`. 
+   The handler names must match what defined in the config file.   
+
+   ```python
+   setup_logging(log_path={'error_file_handler': 'log/error.txt',
+                           'info_file_handler': 'log/info_and_above.txt',
+                           }
+                 )
    ```
 
 ### 2. Provide your config file:
@@ -727,9 +738,82 @@ while True:
         logger.info(f"stop button pressed")
 
 window.close()
+   ```
+   You could set `index=0` to use the normal `StreamHandler` and 
+   see the difference while clicking the `stop` button for yourself.
+
+### 12. Telegram Handler:
+   This handler enables you to send log message directly to telegram users or groups. 
+   For telegram groups, you can specify a certain `topic` to send to, too.
+   This handler uses web api, so there is no third party dependency.
+   
+   To set up this handler, you need the following information:
+     * Your bot `token`: if you don't have one, create a new bot with https://t.me/botfather.
+     * Destination `unique_id`: a `chat_id` (user id or group id) and optionally 
+       `message_thread_id`of a topic in that group. You can chat to or add @RawDataBot to your group to get these ids.
+     * Log level to be sent: above a level or only a specific level.
+   
+     
+   From here you have 2 options, put the `token` and `unique_id` directly in the config file or in the environment.
+   If you specify both ways, if the data exists in the environment variables, 
+   it will replace the one specified in the config file. The default environment variable names are:
+   * token: `TELEGRAM_BOT_LOG_TOKEN`
+   * unique_ids: `TELEGRAM_BOT_LOG_DEST`
+   
+   These above name is specified in `env_token_key` and `env_unique_ids_key` in the default config file. 
+   You may edit them to suit your environment.
+   
+   For the values, `unique_ids` accepts the format `[name:]chat_id[@message_thread_id]`, 
+   multiple values must be separated by semicolon (space after semicolon will be ignored). 
+   Which means the following examples are possible:
+   * a single chat_id: `123456789` (user id) or `-987654321` (group id)
+   * a specified topic within a group: `-987654321@2`
+   * multiple values: `123456789; 102345678; -987654321@2; -987654322@4`
+   * multiple values with names: `Alex:123456789; Bob:102345678; support:-987654321@2; admin:-987654322@4`
+   
+   After having all needed information, the next step is configuring the handler and adding it into the `root` logger.
+   ```yaml
+   handlers:
+     telegram_handler:
+     class: logger_tt.handlers.TelegramHandler
+     level: NOTICE
+     formatter: brief
+     debug: False
+     token: ""
+     unique_ids: ""
+     env_token_key: "TELEGRAM_BOT_LOG_TOKEN",
+     env_unique_ids_key: "TELEGRAM_BOT_LOG_DEST"
+     
+   root:
+     level: DEBUG
+     handlers: [console, error_file_handler, telegram_handler]
+   ```
+
+   From here, it should already work. 
+   If you need certain messages go to a certain people/group, beside of adding a new handler, 
+   you can add a filter that add `dest_name` attribute to the log `record`. 
+   
+```python
+def telegram_filter(record):
+    if 'over threshold' in record.msg:
+        record.dest_name = 'support'
+    elif 'unauthorized' in record.msg:
+        record.dest_name = 'admin'
+    elif 'Alex' in record.msg:
+        record.dest_name = 'Alex'
+    else:
+        pass
+
+log_config = setup_logging()
+log_config.set_context_injector(telegram_filter)
+
+logger.warning(f'Memory usage is over threshold')
+logger.error(f'This deleting action is unauthorized')
+logger.notice(f"Alex's files are ready to be collected")
 ```
-You could set `index=0` to use the normal `StreamHandler` and 
-see the difference while clicking the `stop` button for yourself.
+   `dest_name` should be only one name that has been registered in `unique_ids`. 
+   If the name is not registered, the log record is simply ignored totally. 
+   If you want to send to multiple people, create a telegram group for them and registered the group name.
 
 
 # Sample config:
@@ -776,6 +860,16 @@ handlers:
     buffer_time: 0.5
     buffer_lines: 0
     debug: False
+    
+  telegram_handler:
+    class: logger_tt.handlers.TelegramHandler
+    level: NOTICE
+    formatter: brief
+    debug: False
+    token: "your bot token here or set the below env key to fetch from environ for better security"
+    unique_ids: "semicolon separated of [name:]chat_id[@message_thread_id]"
+    env_token_key: "TELEGRAM_BOT_LOG_TOKEN"
+    env_unique_ids_key: "TELEGRAM_BOT_LOG_DEST"
 
 loggers:
   urllib3:
@@ -849,6 +943,17 @@ logger_tt:
      "buffer_time": 0.5,
      "buffer_lines": 0,
      "debug": false
+    }, 
+     
+   "telegram_handler": {
+     "class": "logger_tt.handlers.TelegramHandler",
+     "level": "NOTICE",
+     "formatter": "brief",
+     "debug": false,
+     "token": "your bot token here or set the below env key to fetch from environ for better security",
+     "unique_ids": "semicolon separated of [name:]chat_id[@message_thread_id]",
+     "env_token_key": "TELEGRAM_BOT_LOG_TOKEN",
+     "env_unique_ids_key": "TELEGRAM_BOT_LOG_DEST"
     }
  },
 
@@ -887,12 +992,16 @@ logger_tt:
 
 # Changelog
 ## 1.7.1
-* Fixed: exception raised while handling another exception is now show correctly (thank ZeroRin). 
-* New functionality: Added `TelegramHandler`. Now you can send log directly to telegram user/group.
+* Fixed: exception raised while handling another exception is now shown correctly (thank ZeroRin). 
+* New functionality: 
+  * Added `TelegramHandler`. Now you can send log directly to telegram users/groups.
+  * Support Python 3.11 `Fine-grained error locations` in tracebacks.
 * Usability: 
-  * Added NOTICE level. You can do `logger.notice("your message")`.
+  * Added level NOTICE = INFO + 5. You can do `logger.notice("your message")`.
   * Add set/remove `context injector` method. 
     You can add additional information to the log record before it is actually handled. 
+    Refer the `TelegramHandler` for usage sample.
+  * You can now set different log paths for different handlers by passing a dict to `setup_logging` (thank ZeroRin). 
 
 ## 1.7.0
 * Fixed: 

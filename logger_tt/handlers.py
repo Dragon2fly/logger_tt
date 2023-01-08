@@ -190,8 +190,8 @@ class TelegramHandler(logging.Handler):
         msg = self.format(record) + remark
 
         # redirect msg to appropriate cache
-        if hasattr(record, 'dest_name'):
-            dest_id = next(filter(lambda x: x.startswith(f'{record.dest_name}:'), self._unique_ids))
+        if getattr(record, 'dest_name', ''):
+            dest_id = next(filter(lambda x: x.startswith(f'{record.dest_name}:'), self._unique_ids), None)
             if dest_id:
                 self.cache[dest_id].append(parse.quote_plus(msg))
             else:

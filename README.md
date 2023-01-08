@@ -803,6 +803,9 @@ def telegram_filter(record):
         record.dest_name = 'Alex'
     else:
         pass
+    
+    # return False will discard this record
+    return True
 
 log_config = setup_logging()
 log_config.set_context_injector(telegram_filter)

@@ -9,10 +9,10 @@ from pathlib import Path
 from typing import *
 
 from .core import DefaultFormatter, LogConfig
-from .inspector import analyze_exception_recur, analyze_frame, logging_disabled
+from .inspector import analyze_exception_recur, logging_disabled
 
 __author__ = "Duc Tin"
-__all__ = ['setup_logging', 'logging_disabled', 'getLogger', 'logger', 'add_logging_level']
+__all__ = ['setup_logging', 'logging_disabled', 'getLogger', 'logger']
 
 """Config log from file and make it also logs uncaught exception"""
 
@@ -139,6 +139,25 @@ def merge_config(from_file: dict, from_func: dict) -> dict:
     return merged
 
 
+def remove_unused_handlers(config: dict):
+    """Handlers that are present in the "handlers" section but are not added to any logger will be remove
+        This is to prevent side effect of creating a handler but it is not used.
+    """
+    all_handlers = list(config['handlers'])
+    used_handlers = config['root']['handlers']
+    for name in config['loggers']:
+        handlers = config['loggers'][name]["handlers"]
+        used_handlers.extend(handlers)
+
+    unused_handlers = []
+    for handler in all_handlers:
+        if handler not in used_handlers:
+            del config['handlers'][handler]
+            unused_handlers.append(handler)
+
+    return unused_handlers
+
+
 def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config) -> LogConfig:
     """Setup logging configuration
 
@@ -174,6 +193,7 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
 
     # load config from file
     config = load_from_file(cfgpath)
+    remove_unused_handlers(config)
     logger_tt_cfg = config.pop('logger_tt', {})
     if current_process().name == 'MainProcess':
         ensure_path(config, log_path)   # create log path if not exist

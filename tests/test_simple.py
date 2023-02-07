@@ -7,7 +7,7 @@ from pathlib import Path
 from io import StringIO
 
 import pytest
-from logger_tt import setup_logging, logging_disabled, logger as my_logger
+from logger_tt import setup_logging, logging_disabled, logger as my_logger, remove_unused_handlers
 
 
 __author__ = "Duc Tin"
@@ -241,3 +241,17 @@ def test_add_logging_level():
 
     log_data = log.read_text()
     assert re.search("NOTICE2.*This is the added level", log_data)
+
+
+def test_remove_unused_handlers():
+    import json
+
+    config_file = Path("../logger_tt/log_config.json")
+    config = json.loads(config_file.read_text())
+
+    assert 'buffer_stream_handler' in config['handlers']
+    assert 'telegram_handler' in config['handlers']
+
+    remove_unused_handlers(config)
+    assert 'buffer_stream_handler' not in config['handlers']
+    assert 'telegram_handler' not in config['handlers']

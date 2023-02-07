@@ -158,19 +158,24 @@ class TelegramHandler(logging.Handler):
                 except error.HTTPError as e:
                     if e.code == 403:
                         # user blocked the bot
-                        logging.getLogger().error(e)
+                        logging.getLogger('logger_tt').error(e)
 
                         # remove msg
                         self.cache[_id_].popleft()
                         break
+                    if e.code == 429:
+                        # resend this msg later
+                        logging.getLogger('logger_tt').info(e)
+                        time.sleep(2)
+                        break
                     else:
                         # resend this msg later
-                        logging.getLogger().error(e)
+                        logging.getLogger('logger_tt').info(e)
                         break
 
                 except Exception as e:
                     # resend this later
-                    logging.getLogger().exception(e)
+                    logging.getLogger('logger_tt').exception(e)
                     break
 
     def _is_duplicated_record(self, record):

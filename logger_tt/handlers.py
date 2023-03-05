@@ -79,8 +79,15 @@ class StreamHandlerWithBuffer(logging.StreamHandler):
 
 class TelegramHandler(logging.Handler):
     def __init__(self, token='', unique_ids=None, env_token_key='', env_unique_ids_key='',
-                 debug=False, check_interval=300):
+                 debug=False, check_interval=600, grouping_interval=0):
         super().__init__()
+
+        # whether to send log message immediately when received or
+        # group them by grouping_interval and send later
+        self.grouping_interval = max(0, int(grouping_interval))
+        self.push_interval = self.grouping_interval + 4
+        if self.grouping_interval and check_interval <= self.push_interval:
+            raise ValueError(f'"check_interval" is too small. Should be at least {2*self.push_interval}')
 
         if env_token_key:
             token = os.environ.get(env_token_key, None) or token
@@ -94,16 +101,23 @@ class TelegramHandler(logging.Handler):
         self.feedback = {x: {} for x in self._unique_ids}
         self.cache = {x: deque(maxlen=100) for x in self._unique_ids}
 
-        # back ground thread resends the log if network error previously
+        # background thread resends the log if network error previously
         self.debug = debug
         self.check_interval = check_interval
         self._stop_event = Event()
         watcher_thread = Thread(target=self.watcher, daemon=True)
         watcher_thread.start()
+        if self.grouping_interval:
+            pusher_thread = Thread(target=self.interval_pusher, daemon=True)
+            pusher_thread.start()
 
         # reduce sending duplicated log
         self.last_record = None
         self.dup_count = 0
+
+    def format(self, record):
+        txt = super().format(record) + getattr(record, 'remark', '')
+        return parse.quote_plus(txt)
 
     def close(self) -> None:
         self._stop_event.set()
@@ -138,45 +152,80 @@ class TelegramHandler(logging.Handler):
         else:
             raise TypeError(f'Expected str or int but got type: {type(ids)}')
 
+    def _request(self, _id_, full_url):
+        """Return True if success or 403, otherwise False"""
+        try:
+            with request.urlopen(full_url) as fi:
+                data = fi.read()
+            self.feedback[_id_] = json.loads(data.decode())
+            return True
+
+        except json.JSONDecodeError as e:
+            self.feedback[_id_] = {'error': str(e), 'data': data}
+            return True
+
+        except error.HTTPError as e:
+            if e.code == 403:
+                # user blocked the bot
+                logging.getLogger('logger_tt').error(e)
+                return True
+            if e.code == 429:
+                logging.getLogger('logger_tt').info(e)
+                time.sleep(1)
+                return False
+            else:
+                logging.getLogger('logger_tt').info(e)
+                return False
+
+        except ConnectionResetError as e:
+            logging.getLogger('logger_tt').info(e)
+            return False
+        except Exception as e:
+            logging.getLogger('logger_tt').exception(e)
+            return False
+
     def send(self):
         for _id_ in self._unique_ids:
             while self.cache[_id_]:
-                msg_out = self.cache[_id_][0]
+                record = self.cache[_id_][0]
+                if isinstance(record, logging.LogRecord):
+                    msg_out = self.format(record)
+                else:
+                    msg_out = record[1]
+
                 full_url = self._get_full_url(_id_, msg_out)
-
-                try:
-                    with request.urlopen(full_url) as fi:
-                        data = fi.read()
-                    self.feedback[_id_] = json.loads(data.decode())
-
-                    # remove from the queue after sending successfully
+                if self._request(_id_, full_url):
                     self.cache[_id_].popleft()
-
-                except json.JSONDecodeError as e:
-                    self.feedback[_id_] = {'error': str(e), 'data': data}
-
-                except error.HTTPError as e:
-                    if e.code == 403:
-                        # user blocked the bot
-                        logging.getLogger('logger_tt').error(e)
-
-                        # remove msg
-                        self.cache[_id_].popleft()
-                        break
-                    if e.code == 429:
-                        # resend this msg later
-                        logging.getLogger('logger_tt').info(e)
-                        time.sleep(2)
-                        break
-                    else:
-                        # resend this msg later
-                        logging.getLogger('logger_tt').info(e)
-                        break
-
-                except Exception as e:
-                    # resend this later
-                    logging.getLogger('logger_tt').exception(e)
+                else:
+                    # resend later
                     break
+
+    def msg_grouping(self):
+        for _id_ in self._unique_ids:
+            group = {}
+            starting = 0
+            while self.cache[_id_]:
+                record = self.cache[_id_].popleft()
+
+                if isinstance(record, logging.LogRecord):
+                    sec_timestamp = int(record.created)
+                    msg = self.format(record)
+                else:
+                    sec_timestamp, msg = record
+                    group[sec_timestamp] = msg
+                    continue
+
+                if starting <= sec_timestamp < starting + self.grouping_interval:
+                    group[starting].append(msg)
+                else:
+                    starting = sec_timestamp
+                    group[starting] = []
+                    group[starting].append(msg)
+
+            for grp, item in group.items():
+                # parse.quote_plus('\n') == %0A
+                msg_out = '%0A'.join(item)
+                self.cache[_id_].append((grp, msg_out))
 
     def _is_duplicated_record(self, record):
         if not self.last_record:
@@ -190,22 +239,20 @@ class TelegramHandler(logging.Handler):
         else:
             return True
 
-    def _naive_emit(self, record, remark=''):
-        # cache msg in case of sending failure
-        msg = self.format(record) + remark
+    def _cache_records(self, record):
+        """cache msg in case of sending failure"""
 
         # redirect msg to appropriate cache
         if getattr(record, 'dest_name', ''):
             dest_id = next(filter(lambda x: x.startswith(f'{record.dest_name}:'), self._unique_ids), None)
             if dest_id:
-                self.cache[dest_id].append(parse.quote_plus(msg))
+                self.cache[dest_id].append(record)
             else:
                 # do nothing
                 pass
         else:
             for _id_ in self._unique_ids:
-                self.cache[_id_].append(parse.quote_plus(msg))
-        self.send()
+                self.cache[_id_].append(record)
 
     def emit(self, record):
         self.acquire()
@@ -216,17 +263,34 @@ class TelegramHandler(logging.Handler):
         elif self.dup_count:
             # changed to new record, no longer duplicated
             # send last msg, then send this time msg
-            self._naive_emit(self.last_record, remark=f'\n (Message repeated {self.dup_count} times)')
-            self._naive_emit(record)
+            self.last_record.remark = f'\n (Message repeated {self.dup_count} times)'
+            self._cache_records(self.last_record)
+            self._cache_records(record)
 
             self.last_record = record
             self.dup_count = 0
+            if not self.grouping_interval:
+                self.send()
         else:
             # last sent record is not duplicated
-            self._naive_emit(record)
+            self._cache_records(record)
             self.last_record = record
+            if not self.grouping_interval:
+                self.send()
 
         self.release()
+
+    def interval_pusher(self):
+        if self.debug:
+            logging.getLogger().debug(f'TelegramHandler interval_pusher starts: {datetime.now()}')
+
+        while not self._stop_event.is_set():
+            time.sleep(self.push_interval)
+            if any(self.cache.values()):
+                self.acquire()
+                self.msg_grouping()
+                self.send()
+                self.release()
 
     def watcher(self):
         """
@@ -237,7 +301,7 @@ class TelegramHandler(logging.Handler):
 
         while not self._stop_event.is_set():
             time.sleep(self.check_interval)
-            if any(self.cache.values()):
+            if any(self.cache.values()) and not self.grouping_interval:
                 if self.debug:
                     logging.getLogger().debug(f'TelegramHandler found unsent messages: {datetime.now()}')
                 self.acquire()
@@ -247,6 +311,8 @@ class TelegramHandler(logging.Handler):
                 if self.debug:
                     logging.getLogger().debug(f'TelegramHandler watcher emit duplicated msg with: {datetime.now()}')
                 self.acquire()
-                self._naive_emit(self.last_record, f'\n (Message repeated {self.dup_count} times)')
+                self.last_record.remark = f'\n (Message repeated {self.dup_count} times)'
+                self._cache_records(self.last_record)
+                self.send()
                 self.dup_count = 0
                 self.release()

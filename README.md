@@ -775,23 +775,28 @@ window.close()
    ```yaml
    handlers:
      telegram_handler:
-     class: logger_tt.handlers.TelegramHandler
-     level: NOTICE
-     formatter: brief
-     debug: False
-     token: ""
-     unique_ids: ""
-     env_token_key: "TELEGRAM_BOT_LOG_TOKEN",
-     env_unique_ids_key: "TELEGRAM_BOT_LOG_DEST"
+       class: logger_tt.handlers.TelegramHandler
+       level: NOTICE
+       formatter: brief
+       debug: False
+       token: ""
+       unique_ids: ""
+       env_token_key: "TELEGRAM_BOT_LOG_TOKEN",
+       env_unique_ids_key: "TELEGRAM_BOT_LOG_DEST"
      
    root:
      level: DEBUG
      handlers: [console, error_file_handler, telegram_handler]
    ```
 
+   Sending too many messages within a second will lead to `HTTP 429` error. 
+   Even though it will resend later, you can avoid the error from the beginning by 
+   adding the param `grouping_interval: 1` to the configuration above.
+   By doing that, all log messages whose timestamp are in the same second will be sent as one telegram message.
+
    From here, it should already work. 
    If you need certain messages to go to a certain people/group, besides adding a new handler, 
-   you can add a filter that adds the `dest_name` attribute to the log `record`. 
+   you can add a filter that adds the `dest_name` attribute to the log `record`.
    
 ```python
 def telegram_filter(record):
@@ -994,6 +999,14 @@ logger_tt:
 ```
 
 # Changelog
+## 1.7.3:
+* Usability: 
+  * Not to import custom handlers (StreamHandlerWithBuffer, TelegramHandler, etc) if they are not used in any logger.
+  * TelegramHandler: 
+    * Better network error handling.
+    * Added `grouping_interval` to group many log messages that are within the same `x` seconds interval into one before sending.
+      This reduces the number of time it sends messages to Telegram server and helps to avoid 429 error.
+
 ## 1.7.2:
 * Fixed: TelegramHandler crashed instead of ignoring the unregistered `unique_id`
 

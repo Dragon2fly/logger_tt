@@ -5,6 +5,7 @@ import atexit
 import platform
 from logging import handlers
 from multiprocessing import Queue as mpQueue, current_process
+from multiprocessing.spawn import is_forking
 from queue import Queue as thQueue
 from threading import Thread, main_thread
 
@@ -154,7 +155,7 @@ class LogConfig:
         self.__middle_handlers.append(socket_handler)
 
         # initiate server
-        if current_process().name == 'MainProcess':
+        if current_process().name == 'MainProcess' and not is_forking(sys.argv):
             self.tcp_server = LogRecordSocketReceiver(self._host, self._port, all_handlers)
             serving = Thread(target=self.tcp_server.serve_until_stopped)
             serving.start()

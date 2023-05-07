@@ -1,0 +1,79 @@
+# This is an example of config file
+# In case of no config provided, log_config.json file will be loaded
+# If you need a yaml file, install pyyaml package and copy this file
+version: 1
+disable_existing_loggers: False
+formatters:
+  simple:
+    style: '{'
+    format: "[{asctime}] [{name}:{lineno} {levelname}] {message}"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+  brief:
+    style: '{'
+    format: "[{asctime}] {levelname}: {message}"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: brief
+    stream: ext://sys.stdout
+
+  error_file_handler:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: DEBUG
+    formatter: simple
+    filename: logs/log.txt
+    backupCount: 15
+    encoding: utf8
+    when: midnight
+    delay: True
+
+  buffer_stream_handler:
+    class: logger_tt.handlers.StreamHandlerWithBuffer
+    level: DEBUG
+    formatter: brief
+    stream: ext://sys.stdout
+    buffer_time: 0.5
+    buffer_lines: 0
+    debug: False
+
+  telegram_handler:
+    class: logger_tt.handlers.TelegramHandler
+    level: NOTICE
+    formatter: brief
+    debug: False
+    token: "your bot token here or set the below env key to fetch from environ for better security"
+    unique_ids: "semicolon separated of [name:]chat_id[@message_thread_id]"
+    env_token_key: "TELEGRAM_BOT_LOG_TOKEN"
+    env_unique_ids_key: "TELEGRAM_BOT_LOG_DEST"
+
+
+loggers:
+  urllib3:
+    level: WARNING
+    handlers: [console, error_file_handler]
+    propagate: no
+
+root:
+  level: DEBUG
+  handlers: [console, error_file_handler]
+
+logger_tt:
+  suppress: ["exchangelib"]
+  suppress_level_below: "WARNING"
+  capture_print: False
+  strict: False
+  guess_level: False
+  full_context: 0
+  use_multiprocessing: False
+  limit_line_length: 1000
+  analyze_raise_statement: False
+  host: ""
+  port: 0
+  default_logger_formats:
+    normal: ["{name}", "{filename}"]
+    thread: ["{message}", "{threadName} {message}"]
+    multiprocess: ["{message}", "{processName} {message}"]
+    both: ["{message}", "{processName} {threadName} {message}"]

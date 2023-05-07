@@ -125,6 +125,7 @@ class LogConfig:
             # add queue handler
             queue = self.qclass()
             q_handler = handlers.QueueHandler(queue)
+            q_handler.setFormatter(all_handlers[0].formatter)
             logger.addHandler(q_handler)
             self.__middle_handlers.append(q_handler)
 
@@ -376,7 +377,7 @@ class DefaultFormatter(logging.Formatter):
                            both=["%(message)s", "%(processName)s %(threadName)s %(message)s"])
 
     def __init__(self, fmt: str = '', datefmt: str = '', style: str = ''):
-        super(DefaultFormatter, self).__init__(fmt=fmt, datefmt=datefmt)
+        super(DefaultFormatter, self).__init__(fmt=fmt, datefmt=datefmt, style=style)
 
         self._logger_tt_formatters = {}
         for case, fmt in self._standardize(fmt).items():
@@ -386,7 +387,7 @@ class DefaultFormatter(logging.Formatter):
         formatters = {'normal': fmt.replace(self.default_formats['normal'][0], self.default_formats['normal'][1])}
 
         # concurrent format
-        concurrent_fmt = formatters['normal'].replace('%(threadName)s', '').replace('%(processName)s', '')
+        concurrent_fmt = formatters['normal'].replace('%(threadName)s', '').replace('%(processName)s', '').replace('{threadName}', '').replace('{processName}', '')
         for _type, replacement in self.default_formats.items():
             if _type == 'normal':
                 continue

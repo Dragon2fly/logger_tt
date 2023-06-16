@@ -999,6 +999,11 @@ logger_tt:
 ```
 
 # Changelog
+## 1.7.4:
+* Fixed: TelegramHandler re-group again an already grouped message
+* Usability:
+  * Change method of detecting child process, potentially fix all issues related to multiprocessing and pyinstaller
+
 ## 1.7.3:
 * Usability: 
   * Not to import custom handlers (StreamHandlerWithBuffer, TelegramHandler, etc) if they are not used in any logger.

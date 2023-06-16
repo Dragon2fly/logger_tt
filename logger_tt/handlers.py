@@ -78,14 +78,28 @@ class StreamHandlerWithBuffer(logging.StreamHandler):
 
 
 class TelegramHandler(logging.Handler):
-    def __init__(self, token='', unique_ids=None, env_token_key='', env_unique_ids_key='',
-                 debug=False, check_interval=600, grouping_interval=0):
+    def __init__(self, token='', unique_ids='', env_token_key='', env_unique_ids_key='',
+                 debug=False, check_interval=600, grouping_interval=0, push_interval=0):
+        """ Init telegram handler
+
+        :param token: str, Telegram bot token
+        :param unique_ids: str, where to send the log to, "[name:]chat_id[@message_thread_id]"
+        :param env_token_key: str, environment variable name that holds Telegram bot token
+        :param env_unique_ids_key: str, environment variable name that holds unique_ids
+        :param debug: bool, print additional log for testing
+        :param check_interval: check and resend failed message every this seconds
+
+        For grouping multiple log message into one for each sending:
+        :param grouping_interval: every log message has timestamp within this seconds
+            will be grouped into one message before sending
+        :param push_interval: how often the log should be sent out, min: 4 seconds
+        """
         super().__init__()
 
         # whether to send log message immediately when received or
         # group them by grouping_interval and send later
         self.grouping_interval = max(0, int(grouping_interval))
-        self.push_interval = self.grouping_interval + 4
+        self.push_interval = push_interval or self.grouping_interval + 4
         if self.grouping_interval and check_interval <= self.push_interval:
             raise ValueError(f'"check_interval" is too small. Should be at least {2*self.push_interval}')
 
@@ -165,23 +179,33 @@ class TelegramHandler(logging.Handler):
             return True
 
         except error.HTTPError as e:
+            time.sleep(1)
             if e.code == 403:
                 # user blocked the bot
                 logging.getLogger('logger_tt').error(e)
                 return True
             if e.code == 429:
                 logging.getLogger('logger_tt').info(e)
-                time.sleep(1)
+                return False
+            elif e.code == 414:
+                # Request-URI Too Large
+                logging.getLogger('logger_tt').info(e)
+                logging.getLogger('logger_tt').info(full_url)
                 return False
             else:
                 logging.getLogger('logger_tt').info(e)
+                return False
+
+        except error.URLError as e:
+            time.sleep(1)
+            if "[Errno -2] Name or service not known" in e.reason:
                 return False
 
         except ConnectionResetError as e:
             logging.getLogger('logger_tt').info(e)
             return False
         except Exception as e:
-            logging.getLogger('logger_tt').exception(e)
+            logging.getLogger('logger_tt').info(e)
             return False
 
     def send(self):
@@ -212,15 +236,14 @@ class TelegramHandler(logging.Handler):
                     msg = self.format(record)
                 else:
                     sec_timestamp, msg = record
-                    group[sec_timestamp] = msg
+                    group[sec_timestamp] = [msg]
                     continue
 
                 if starting <= sec_timestamp < starting + self.grouping_interval:
                     group[starting].append(msg)
                 else:
                     starting = sec_timestamp
-                    group[starting] = []
-                    group[starting].append(msg)
+                    group[starting] = [msg]
 
             for grp, item in group.items():
                 # parse.quote_plus('\n') == %0A

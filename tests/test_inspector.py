@@ -9,7 +9,7 @@ import pytest
 from logger_tt.inspector import get_recur_attr, get_repr, is_full_statement, get_full_statement, MEM_PATTERN
 
 __author__ = "Duc Tin"
-log = Path.cwd() / 'logs/log.txt'
+log = Path(__file__).parent / 'logs/log.txt'
 
 
 def test_get_recur_attr():

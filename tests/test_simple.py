@@ -13,7 +13,7 @@ from logger_tt import setup_logging, logging_disabled, logger as my_logger, remo
 __author__ = "Duc Tin"
 
 logger = getLogger(__name__)
-log = Path.cwd() / 'logs/log.txt'
+log = Path(__file__).parent / 'logs/log.txt'
 
 
 def test_basic_function(capsys):

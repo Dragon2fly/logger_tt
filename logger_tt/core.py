@@ -19,6 +19,18 @@ __author__ = "Duc Tin"
 root_logger = logging.getLogger()
 
 
+def in_main_process() -> bool:
+    # run from python interpreter
+    condition1 = current_process().name == 'MainProcess'
+
+    # run after frozen by pyinstaller or nuitka
+    # mimic multiprocessing.spawn.is_forking
+    # detect sys.argv[1] as added by multiprocessing.freeze_support()
+    condition2 = not (len(sys.argv) >= 2 and sys.argv[1] == '--multiprocessing-fork')
+    print('is_main_process:', condition1 and condition2, current_process().name, current_process().pid, sys.argv)
+    return condition1 and condition2
+
+
 class LogConfig:
     def __init__(self):
         self.qclass = None
@@ -154,7 +166,7 @@ class LogConfig:
         self.__middle_handlers.append(socket_handler)
 
         # initiate server
-        if current_process().name == 'MainProcess':
+        if in_main_process():
             self.tcp_server = LogRecordSocketReceiver(self._host, self._port, all_handlers)
             serving = Thread(target=self.tcp_server.serve_until_stopped)
             serving.start()
@@ -164,7 +176,7 @@ class LogConfig:
         """Replace a stream of the root logger's handler
             This is mainly for GUI app to redirect the log to a widget
         """
-        if current_process().name != 'MainProcess':
+        if not in_main_process():
             # nothing to do in child processes as all logs are redirected to main
             return
 

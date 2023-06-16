@@ -249,7 +249,7 @@ def test_telegram_handler_repeated_msg_then_change(caplog):
     assert 'watcher emit duplicated' not in caplog.text
 
 
-def test_telegram_handler_grouping_msg(caplog):
+def test_telegram_handler_grouping_msg_normal(caplog):
     bot_token = ''
     user_id = '123456789'
     logger = getLogger('test telegram 3')
@@ -296,5 +296,51 @@ def test_telegram_handler_grouping_msg(caplog):
     log_sent.seek(0)
     data = log_sent.read()
     count = data.count('https')
-    print(data)
+    # print(data)
     assert count == 3, 'There should be 3 groups of http request'
+
+
+def test_telegram_handler_grouping_msg_resend(caplog):
+    bot_token = ''
+    user_id = '123456789'
+    logger = getLogger('test telegram 3')
+    handler = TelegramHandler(token=bot_token, unique_ids=user_id, debug=True, check_interval=10, grouping_interval=1)
+    formatter = Formatter(fmt="[%(asctime)s.%(msecs)03d] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.propagate = False
+    getLogger().setLevel(0)
+
+    # setup
+    from urllib import request, error
+    code = 414
+    log_sent = StringIO()
+
+    def fake_urlopen(url: str, *args, **kwargs):
+        if code != 200:
+            log_sent.write(url)
+            raise error.HTTPError('fake_url', code=code, msg='fake_url raised error', hdrs={}, fp=None)
+        else:
+            log_sent.write(parse.unquote_plus(url) + '\n\n')
+            my_stream = BytesIO()
+            my_stream.write('{"ok": "true"}\n'.encode())
+            my_stream.seek(0)
+            return my_stream
+
+    request.urlopen = fake_urlopen
+
+    # run repeat the same message for a while then different message
+    log_sent = StringIO()
+    logger.warning(f'Connection error: server 500. Retry {100} time')
+
+    # first sent
+    time.sleep(6)  # let watcher run
+
+    # second sent
+    time.sleep(6)  # let watcher run
+
+    log_sent.seek(0)
+    data = log_sent.read()
+    count = data.count('%0A')
+    # print(data)
+    assert count == 0, 'Grouped message should not be regrouped again'

@@ -4,11 +4,10 @@ import sys
 import threading
 from logging import getLogger
 from logging.config import dictConfig
-from multiprocessing import current_process
 from pathlib import Path
 from typing import *
 
-from .core import DefaultFormatter, LogConfig
+from .core import DefaultFormatter, LogConfig, in_main_process
 from .inspector import analyze_exception_recur, logging_disabled
 
 __author__ = "Duc Tin"
@@ -185,7 +184,7 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
 
     if config_path:
         cfgpath = Path(config_path)
-        assert cfgpath.is_file(), 'Input config path is not a file!'
+        assert cfgpath.is_file(), f'Input config path is not a file: "{cfgpath.absolute()}"'
         assert cfgpath.suffix in ['.yaml', '.json', '.yml'], 'Config file type must be either yaml, yml or json!'
         assert cfgpath.exists(), f'Config file path not exists! {cfgpath.absolute()}'
     else:
@@ -195,7 +194,7 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
     config = load_from_file(cfgpath)
     remove_unused_handlers(config)
     logger_tt_cfg = config.pop('logger_tt', {})
-    if current_process().name == 'MainProcess':
+    if in_main_process():
         ensure_path(config, log_path)   # create log path if not exist
     else:
         # child process of Spawn-method
@@ -216,7 +215,7 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
         else:
             logging.config.dictConfig(config)
 
-        if current_process().name == 'MainProcess':
+        if in_main_process():
             logging.debug('New log started'.center(50, '_'))
             logging.debug(f'Log config file: {cfgpath}')
 

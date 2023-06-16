@@ -5,7 +5,7 @@ from pathlib import Path
 
 __author__ = "Duc Tin"
 
-log = Path.cwd() / 'logs/log.txt'
+log = Path(__file__).parent / 'logs/log.txt'
 
 
 def test_log_uncaught_thread_exception():

@@ -165,23 +165,33 @@ class TelegramHandler(logging.Handler):
             return True
 
         except error.HTTPError as e:
+            time.sleep(1)
             if e.code == 403:
                 # user blocked the bot
                 logging.getLogger('logger_tt').error(e)
                 return True
             if e.code == 429:
                 logging.getLogger('logger_tt').info(e)
-                time.sleep(1)
+                return False
+            elif e.code == 414:
+                # Request-URI Too Large
+                logging.getLogger('logger_tt').info(e)
+                logging.getLogger('logger_tt').info(full_url)
                 return False
             else:
                 logging.getLogger('logger_tt').info(e)
+                return False
+
+        except error.URLError as e:
+            time.sleep(1)
+            if "[Errno -2] Name or service not known" in e.reason:
                 return False
 
         except ConnectionResetError as e:
             logging.getLogger('logger_tt').info(e)
             return False
         except Exception as e:
-            logging.getLogger('logger_tt').exception(e)
+            logging.getLogger('logger_tt').info(e)
             return False
 
     def send(self):
@@ -212,15 +222,14 @@ class TelegramHandler(logging.Handler):
                     msg = self.format(record)
                 else:
                     sec_timestamp, msg = record
-                    group[sec_timestamp] = msg
+                    group[sec_timestamp] = [msg]
                     continue
 
                 if starting <= sec_timestamp < starting + self.grouping_interval:
                     group[starting].append(msg)
                 else:
                     starting = sec_timestamp
-                    group[starting] = []
-                    group[starting].append(msg)
+                    group[starting] = [msg]
 
             for grp, item in group.items():
                 # parse.quote_plus('\n') == %0A

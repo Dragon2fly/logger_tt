@@ -5,15 +5,14 @@ from pathlib import Path
 from subprocess import run
 
 __author__ = "ZeroRin"
-log = Path(__file__).parent/'logs/log.txt'
-modified_log = Path(__file__).parent/'logs/log.log'
-
+log = Path.cwd()/'logs/log.txt'
+modified_log =  Path.cwd()/'logs/log.log'
 
 def test_edit_log_path():
-    """
+    '''
     passing a log_path in string to setup_logging
     all file handlers should be redirected to that file
-    """
+    '''
     # create config file with multiple file handlers 
     config_file = Path("../logger_tt/log_config.json")
     config = json.loads(config_file.read_text())
@@ -31,12 +30,11 @@ def test_edit_log_path():
     assert re.search('A log from urllib logger', data)
     test_config.unlink()
 
-
 def test_edit_log_path_partial():
-    """
+    '''
     passing a log_path in dict to setup_logging
     only selected file handler should be redirected to that file
-    """
+    '''
     # create config file with multiple file handlers 
     config_file = Path("../logger_tt/log_config.json")
     config = json.loads(config_file.read_text())

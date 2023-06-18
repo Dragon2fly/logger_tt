@@ -1,11 +1,12 @@
 import shutil
+import time
 from pathlib import Path
 
 
 __author__ = "Duc Tin"
 
 
-log = Path(__file__).parent / 'logs/log.txt'
+log = Path.cwd() / 'logs/log.txt'
 
 
 def remove_log():

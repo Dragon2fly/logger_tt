@@ -10,7 +10,7 @@ from logger_tt import setup_logging
 
 __author__ = "Duc Tin"
 
-log = Path(__file__).parent / 'logs/log.txt'
+log = Path.cwd() / 'logs/log.txt'
 
 
 def test_multiprocessing_normal():

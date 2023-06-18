@@ -387,8 +387,8 @@ class DefaultFormatter(logging.Formatter):
                            multiprocess=["%(message)s", "%(processName)s %(message)s"],
                            both=["%(message)s", "%(processName)s %(threadName)s %(message)s"])
 
-    def __init__(self, fmt: str = '', datefmt: str = '', style: str = ''):
-        super(DefaultFormatter, self).__init__(fmt=fmt, datefmt=datefmt)
+    def __init__(self, fmt: str = '', datefmt: str = '', style: str = '%'):
+        super(DefaultFormatter, self).__init__(fmt=fmt, datefmt=datefmt, style=style)
 
         self._logger_tt_formatters = {}
         for case, fmt in self._standardize(fmt).items():

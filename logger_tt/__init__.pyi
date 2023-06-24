@@ -1,5 +1,6 @@
 import logging
 
+from typing import Union
 from logging import getLogger
 from .inspector import logging_disabled
 from .core import LogConfig
@@ -19,7 +20,7 @@ def setup_logging(config_path: str = "", log_path: str = "",
                   full_context: int = 0,
                   suppress: list = None,
                   suppress_level_below: int = logging.WARNING,
-                  use_multiprocessing: bool = False,
+                  use_multiprocessing: Union[bool,int, str] = False,
                   limit_line_length: int = 1000,
                   analyze_raise_statement: bool = False,
                   host: str = None,

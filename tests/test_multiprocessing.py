@@ -122,3 +122,25 @@ def test_multiprocessing_port_change():
     assert '6789' in result.stdout, "Port failed to change"
     assert result.stdout.count("stopped") == 3, "Child process failed to log"
 
+
+def test_multiprocessing_automatic_port():
+    yaml = YAML(typ='safe')
+    config_file = Path("../logger_tt/log_config.yaml")
+    log_config = yaml.load(config_file.read_text())
+    log_config['logger_tt']['use_multiprocessing'] = True
+    log_config['logger_tt']['port'] = 0
+
+    # write the config out
+    test_config = Path("multiprocessing_change_port.yaml")
+    yaml.dump(data=log_config, stream=test_config)
+
+    cmd = [sys.executable, "multiprocessing_change_port.py", "4"]
+    result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+    assert result.returncode == 0, f'subprocess crashed with error: {result.stderr}'
+
+    test_config.unlink()
+    data = log.read_text(encoding='utf8')
+    assert not result.stderr
+    assert 'Server port' in data, "Port failed to change"
+    assert 'Child picked up' in data, "Port failed to change"
+    assert result.stdout.count("stopped") == 4, "Child process failed to log"

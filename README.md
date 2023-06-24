@@ -522,9 +522,11 @@ The content of `log.txt` should be similar to below:
    This is to prevent you `set_start_method` as `spawn` under linux and thus `queueHandler` won't work.
 
 
-   **Socket Address**: `socketHandler` will use tcp `localhost` and port `9020` by default. 
+   **Socket Address**: 
+   * `v1.7.3` and before: `socketHandler` will use tcp `localhost` and port `9020` by default. 
    In the rare cases where you run multiple multiprocessing applications with `logger_tt`, 
    the `Address already in use` error will be raised. In such cases, you have to set the address manually.
+   * `v1.7.4` and after: `socketHandler` will use tcp `localhost` and a random available port by default. 
 
 ```python
 setup_logging(host='localhost', port=6789)
@@ -1002,7 +1004,12 @@ logger_tt:
 ## 1.7.4:
 * Fixed: TelegramHandler re-group again an already grouped message
 * Usability:
-  * Change the method of detecting child process, potentially fix all issues related to multiprocessing and pyinstaller
+  * Pyinstaller: Changed the method of detecting child process, potentially fix all issues related to multiprocessing and pyinstaller
+  * Multiprocessing: logger's server port now automatically picks up a random available port 
+    instead of `DEFAULT_TCP_LOGGING_PORT`. This means in the case of running many multiprocessing 
+    application at the same time, user doesn't need to care about the `port` parameter anymore. 
+    Each application will pick it own port, their child processes will connect to the correct port,
+    and thus log to the correct log file.
 
 ## 1.7.3:
 * Usability: 

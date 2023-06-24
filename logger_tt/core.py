@@ -1,3 +1,4 @@
+import os
 import socket
 import sys
 import logging
@@ -27,7 +28,7 @@ def in_main_process() -> bool:
     # mimic multiprocessing.spawn.is_forking
     # detect sys.argv[1] as added by multiprocessing.freeze_support()
     condition2 = not (len(sys.argv) >= 2 and sys.argv[1] == '--multiprocessing-fork')
-    print('is_main_process:', condition1 and condition2, current_process().name, current_process().pid, sys.argv)
+    # print('is_main_process:', condition1 and condition2, current_process().name, current_process().pid, sys.argv)
     return condition1 and condition2
 
 
@@ -41,6 +42,7 @@ class LogConfig:
         self._host = 'localhost'
         self._port = handlers.DEFAULT_TCP_LOGGING_PORT
         self.tcp_server = None
+        self.env_port_var = 'logger_tt_{}'
 
         # other settings
         self.full_context = False
@@ -94,7 +96,7 @@ class LogConfig:
 
         # host and port for multiprocessing logging
         self._host = odict.get('host') or 'localhost'
-        self._port = odict.get('port') or handlers.DEFAULT_TCP_LOGGING_PORT
+        self._port = odict.get('port', handlers.DEFAULT_TCP_LOGGING_PORT)
 
         # set logging mode accordingly
         self._set_mode(odict['use_multiprocessing'])
@@ -151,26 +153,42 @@ class LogConfig:
 
     def _replace_with_socket_handler(self):
         """ setup a central socket handler and start a listener server """
-        logger = logging.getLogger()
+        # logger = logging.getLogger()
 
         # backup current handlers
-        all_handlers = logger.handlers
+        all_handlers = root_logger.handlers
 
         # clear all handlers
-        logger.handlers = []
-
-        # add socket handler
-        socket_handler = logging.handlers.SocketHandler(self._host, self._port)
-        atexit.register(socket_handler.close)
-        logger.addHandler(socket_handler)
-        self.__middle_handlers.append(socket_handler)
+        root_logger.handlers = []
 
         # initiate server
         if in_main_process():
             self.tcp_server = LogRecordSocketReceiver(self._host, self._port, all_handlers)
             serving = Thread(target=self.tcp_server.serve_until_stopped)
             serving.start()
+
+            host, port = self.tcp_server.socket.getsockname()
+            self._port = port   # get the real port number in case user used "0"
+
+            # set environ variable for child processes
+            pid = current_process().pid
+            os.environ[self.env_port_var.format(pid)] = str(port)
+
+            # add socket handler
+            socket_handler = logging.handlers.SocketHandler(self._host, port)
+            root_logger.addHandler(socket_handler)
             root_logger.debug('Logging server started!')
+            root_logger.debug(f'Server port: {port}')
+        else:
+            # add socket handler
+            parent_pid = os.getppid()
+            port = os.environ.get(self.env_port_var.format(parent_pid), self._port)
+            socket_handler = logging.handlers.SocketHandler(self._host, int(port))
+            root_logger.addHandler(socket_handler)
+            root_logger.debug(f'Child picked up port: {port}')
+
+        atexit.register(socket_handler.close)
+        self.__middle_handlers.append(socket_handler)
 
     def replace_handler_stream(self, index: int, stream):
         """Replace a stream of the root logger's handler

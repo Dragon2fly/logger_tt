@@ -143,7 +143,7 @@ def remove_unused_handlers(config: dict):
         This is to prevent side effect of creating a handler but it is not used.
     """
     all_handlers = list(config['handlers'])
-    used_handlers = config['root']['handlers']
+    used_handlers = list(config['root']['handlers'])
     for name in config['loggers']:
         handlers = config['loggers'][name]["handlers"]
         used_handlers.extend(handlers)

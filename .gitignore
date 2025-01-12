@@ -3,5 +3,7 @@ __pycache__
 **/logs/**
 .vscode
 venv*/
-build/
-dist/
+build*/
+dist*/
+.coverage
+.idea/

@@ -94,7 +94,7 @@ class LogConfig:
         # backup root handler:
         self.root_handlers = root_logger.handlers
 
-        # host and port for multiprocessing logging
+        # host, port, and waiting time before exit for multiprocessing logging
         self._host = odict.get('host') or 'localhost'
         self._port = odict.get('port', handlers.DEFAULT_TCP_LOGGING_PORT)
 

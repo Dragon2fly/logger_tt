@@ -139,8 +139,8 @@ def merge_config(from_file: dict, from_func: dict) -> dict:
 
 
 def remove_unused_handlers(config: dict):
-    """Handlers that are present in the "handlers" section but are not added to any logger will be remove
-        This is to prevent side effect of creating a handler but it is not used.
+    """Handlers that are present in the "handlers" section but are not added to any logger will be removed
+        This is to prevent side effect of creating a handler, but it is not used.
     """
     all_handlers = list(config['handlers'])
     used_handlers = list(config['root']['handlers'])
@@ -234,7 +234,7 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
 
 class ExceptionLogger(logging.Logger):
     """Modify the `exception` func so that it print out context too
-        This allow user do a try-except in outer code but still has the full log
+        This allows user do a try-except in outer code but still has the full log
         of nested code's error
         Example:
             try:

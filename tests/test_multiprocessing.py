@@ -6,7 +6,7 @@ from ruamel.yaml import YAML
 from subprocess import run, PIPE
 from pathlib import Path
 from contextlib import contextmanager
-
+from typing import List
 from logger_tt import setup_logging
 
 __author__ = "Duc Tin"
@@ -15,7 +15,7 @@ log = Path.cwd() / 'logs/log.txt'
 
 
 @contextmanager
-def config_modified(out_name: str, key_val: list[tuple]) -> Path:
+def config_modified(out_name: str, key_val: List[tuple]) -> Path:
     # read in default config
     yaml = YAML(typ='safe')
     config_file = Path("../logger_tt/log_config.yaml")
@@ -42,7 +42,7 @@ def config_modified(out_name: str, key_val: list[tuple]) -> Path:
         yield test_config
     finally:
         # delete it
-        test_config.unlink(missing_ok=True)
+        test_config.unlink()
 
 
 def test_multiprocessing_normal():

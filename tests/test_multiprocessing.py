@@ -5,12 +5,44 @@ import pytest
 from ruamel.yaml import YAML
 from subprocess import run, PIPE
 from pathlib import Path
+from contextlib import contextmanager
 
 from logger_tt import setup_logging
 
 __author__ = "Duc Tin"
 
 log = Path.cwd() / 'logs/log.txt'
+
+
+@contextmanager
+def config_modified(out_name: str, key_val: list[tuple]) -> Path:
+    # read in default config
+    yaml = YAML(typ='safe')
+    config_file = Path("../logger_tt/log_config.yaml")
+    log_config = yaml.load(config_file.read_text())
+
+    # update config
+    for key, val in key_val:
+        path = key.split("/")
+        ob = log_config
+        while len(path) > 1:
+            k = path.pop(0)
+            try:
+                ob = ob[k]
+            except KeyError:
+                ob[k] = None
+
+        last_k = path[0]
+        ob[last_k] = val
+
+    # write the config out
+    test_config = Path(out_name)
+    yaml.dump(data=log_config, stream=test_config)
+    try:
+        yield test_config
+    finally:
+        # delete it
+        test_config.unlink(missing_ok=True)
 
 
 def test_multiprocessing_normal():
@@ -66,21 +98,15 @@ def test_multiprocessing_threading():
 
 def test_multiprocessing_rollover():
     # reduce the rollover interval to 5 seconds
-    yaml = YAML(typ='safe')
-    config_file = Path("../logger_tt/log_config.yaml")
-    log_config = yaml.load(config_file.read_text())
-    log_config['handlers']['error_file_handler']['when'] = 's'
-    log_config['handlers']['error_file_handler']['interval'] = 5
-
-    # write the config out
-    test_config = Path("multiprocessing_issue3_config.yaml")
-    yaml.dump(data=log_config, stream=test_config)
-
-    # test it
-    cmd = [sys.executable, "multiprocessing_issue3.py", "3"]
-    result = run(cmd, stderr=PIPE, universal_newlines=True)
-    test_config.unlink()
-    assert "PermissionError: [WinError 32] The process cannot access the file" not in result.stderr
+    with config_modified(
+            "multiprocessing_issue3_config.yaml",
+            [
+                ('handlers/error_file_handler/when', 's'),
+                ('handlers/error_file_handler/interval', 5)]):
+        # test it
+        cmd = [sys.executable, "multiprocessing_issue3.py", "3"]
+        result = run(cmd, stderr=PIPE, universal_newlines=True)
+        assert "PermissionError: [WinError 32] The process cannot access the file" not in result.stderr
 
 
 def test_multiprocessing_issue5():
@@ -104,43 +130,31 @@ def test_multiprocessing_issue5():
 
 def test_multiprocessing_port_change():
     """Change the tcp server's port to a user selected one"""
-    yaml = YAML(typ='safe')
-    config_file = Path("../logger_tt/log_config.yaml")
-    log_config = yaml.load(config_file.read_text())
-    log_config['logger_tt']['use_multiprocessing'] = True
-    log_config['logger_tt']['port'] = 6789
 
-    # write the config out
-    test_config = Path("multiprocessing_change_port.yaml")
-    yaml.dump(data=log_config, stream=test_config)
+    with config_modified(
+            "multiprocessing_change_port.yaml",
+            [('logger_tt/use_multiprocessing', True),
+             ('logger_tt/port', 6789)]):
+        cmd = [sys.executable, "multiprocessing_change_port.py", "3"]
+        result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        assert result.returncode == 0, f'subprocess crashed with error: {result.stderr}'
 
-    cmd = [sys.executable, "multiprocessing_change_port.py", "3"]
-    result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
-    assert result.returncode == 0, f'subprocess crashed with error: {result.stderr}'
-
-    test_config.unlink()
-    assert '6789' in result.stdout, "Port failed to change"
-    assert result.stdout.count("stopped") == 3, "Child process failed to log"
+        assert '6789' in result.stdout, "Port failed to change"
+        assert result.stdout.count("stopped") == 3, "Child process failed to log"
 
 
 def test_multiprocessing_automatic_port():
-    yaml = YAML(typ='safe')
-    config_file = Path("../logger_tt/log_config.yaml")
-    log_config = yaml.load(config_file.read_text())
-    log_config['logger_tt']['use_multiprocessing'] = True
-    log_config['logger_tt']['port'] = 0
-
     # write the config out
-    test_config = Path("multiprocessing_change_port.yaml")
-    yaml.dump(data=log_config, stream=test_config)
+    with config_modified(
+            "multiprocessing_change_port.yaml",
+            [('logger_tt/use_multiprocessing', True),
+             ('logger_tt/port', 0)]):
+        cmd = [sys.executable, "multiprocessing_change_port.py", "4"]
+        result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        assert result.returncode == 0, f'subprocess crashed with error: {result.stderr}'
 
-    cmd = [sys.executable, "multiprocessing_change_port.py", "4"]
-    result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
-    assert result.returncode == 0, f'subprocess crashed with error: {result.stderr}'
-
-    test_config.unlink()
-    data = log.read_text(encoding='utf8')
-    assert not result.stderr
-    assert 'Server port' in data, "Port failed to change"
-    assert 'Child picked up' in data, "Port failed to change"
-    assert result.stdout.count("stopped") == 4, "Child process failed to log"
+        data = log.read_text(encoding='utf8')
+        assert not result.stderr
+        assert 'Server port' in data, "Port failed to change"
+        assert 'Child picked up' in data, "Port failed to change"
+        assert result.stdout.count("stopped") == 4, "Child process failed to log"

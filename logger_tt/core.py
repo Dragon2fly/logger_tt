@@ -4,6 +4,7 @@ import sys
 import logging
 import atexit
 import platform
+import time
 from logging import handlers
 from multiprocessing import Queue as mpQueue, current_process
 from queue import Queue as thQueue
@@ -52,7 +53,7 @@ class LogConfig:
         self.suppress_level_below = logging.WARNING
         self.limit_line_length = 1000
         self.analyze_raise_statement = False
-
+        self.server_timeout = 5
         self.original_stdout = sys.stdout
 
         # suppress logger list for usage in filter
@@ -97,6 +98,7 @@ class LogConfig:
         # host, port, and waiting time before exit for multiprocessing logging
         self._host = odict.get('host') or 'localhost'
         self._port = odict.get('port', handlers.DEFAULT_TCP_LOGGING_PORT)
+        self.server_timeout = max(1, odict.get('server_timeout', 0))
 
         # set logging mode accordingly
         self._set_mode(odict['use_multiprocessing'])
@@ -163,7 +165,7 @@ class LogConfig:
 
         # initiate server
         if in_main_process():
-            self.tcp_server = LogRecordSocketReceiver(self._host, self._port, all_handlers)
+            self.tcp_server = LogRecordSocketReceiver(self._host, self._port, all_handlers, self.server_timeout)
             serving = Thread(target=self.tcp_server.serve_until_stopped)
             serving.start()
 
@@ -307,6 +309,7 @@ class LogRecordStreamHandler(socketserver.StreamRequestHandler):
     """
     # log record handlers
     handlers = []
+    timeout = 5     # socket timeout when reading
 
     def receive_meta(self):
         """Get the byte length of incoming log record"""
@@ -340,7 +343,6 @@ class LogRecordStreamHandler(socketserver.StreamRequestHandler):
         followed by the LogRecord in pickle format. Logs the record
         according to whatever policy is configured locally.
         """
-        self.connection.settimeout(5)
         while True:
             chunk = self.receive_meta()
             if not chunk:
@@ -375,19 +377,43 @@ class LogRecordSocketReceiver(socketserver.ThreadingTCPServer):
     """
 
     allow_reuse_address = True
-    daemon_threads = False  # Set this to True to immediate exit when main-thread exits.
+    daemon_threads = True  # Set this to True to immediate exit when main-thread exits.
 
     # There is a chance that it terminates some log records that are
     # being processed
 
-    def __init__(self, host, port, log_record_handlers):
+    def __init__(self, host, port, log_record_handlers, last_log_timeout):
+        # update handler class
         LogRecordStreamHandler.handlers = log_record_handlers
+        LogRecordStreamHandler.timeout = last_log_timeout
         super().__init__((host, port), LogRecordStreamHandler)
-        self.abort = False
+
+        # if there is a socket connection, wait maximum this seconds
+        self.last_log_timeout = last_log_timeout
+
+        # timeout for select.select()
         self.timeout = 1
 
     def serve_until_stopped(self):
-        while main_thread().is_alive():
+
+        main_exited_at = 0
+        while True:
+            if not main_exited_at and not main_thread().is_alive():
+                # record the time that the dead of the main thread is detected
+                main_exited_at = time.time()
+                root_logger.handlers = self.RequestHandlerClass.handlers
+                root_logger.debug(f'Detected main thread death at timestamp: {main_exited_at}')
+
+            # calculate the uptime
+            dt = time.time() - main_exited_at
+
+            # exit if main exited and uptime is too long
+            if main_exited_at and dt > self.last_log_timeout:
+                self_exit_at = time.time()
+                root_logger.debug(f'Logger server exited at timestamp: {self_exit_at}')
+                break
+
+            # else serve the request if any
             rd, wr, ex = select.select([self.socket.fileno()],
                                        [], [],
                                        self.timeout)

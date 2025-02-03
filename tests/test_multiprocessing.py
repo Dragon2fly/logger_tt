@@ -158,3 +158,62 @@ def test_multiprocessing_automatic_port():
         assert 'Server port' in data, "Port failed to change"
         assert 'Child picked up' in data, "Port failed to change"
         assert result.stdout.count("stopped") == 4, "Child process failed to log"
+
+
+def test_multiprocessing_issue21_timeout1sec():
+    # continue logging for 1 sec after main thread of main process exited
+
+    # set server_timeout to 1 second is set in the target py file below
+    timeout = 1
+    with config_modified(
+            'multiprocessing_issue21.yaml',
+            [('logger_tt/use_multiprocessing', True),
+             ('logger_tt/server_timeout', timeout)]):
+        cmd = [sys.executable, "multiprocessing_issue21.py", "3"]
+        result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        assert result.returncode == 0, f'subprocess crashed with error: {result.stderr}'
+
+        data = log.read_text()
+        main_thread_died_at, server_exit_at = map(float, re.findall(f'timestamp: ([0-9.]+)', data))
+        dt = server_exit_at - main_thread_died_at
+        assert timeout < dt < timeout + 1    # plus one second from socket timeout
+
+
+def test_multiprocessing_issue21_timeout3sec():
+    # continue logging for 3 sec after main thread of main process exited
+
+    # set server_timeout to 3 second is set in the target py file below
+    timeout = 3
+    with config_modified(
+            'multiprocessing_issue21.yaml',
+            [('logger_tt/use_multiprocessing', True),
+             ('logger_tt/server_timeout', timeout)]):
+        cmd = [sys.executable, "multiprocessing_issue21.py", "3"]
+        result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        assert result.returncode == 0, f'subprocess crashed with error: {result.stderr}'
+
+        data = log.read_text()
+        main_thread_died_at, server_exit_at = map(float, re.findall(f'timestamp: ([0-9.]+)', data))
+        dt = server_exit_at - main_thread_died_at
+        assert timeout < dt < timeout + 1       # plus one second from socket timeout
+
+
+def test_multiprocessing_issue21_timeout5sec():
+    # continue logging for 5 sec after main thread of main process exited
+
+    timeout = 5
+    with config_modified(
+            'multiprocessing_issue21.yaml',
+            [('logger_tt/use_multiprocessing', True),
+             ('logger_tt/server_timeout', timeout)]):
+        cmd = [sys.executable, "multiprocessing_issue21.py", "3"]
+        result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        assert result.returncode == 0, f'subprocess crashed with error: {result.stderr}'
+
+        data = log.read_text()
+        main_thread_died_at, server_exit_at = map(float, re.findall(f'timestamp: ([0-9.]+)', data))
+        dt = server_exit_at - main_thread_died_at
+        assert timeout < dt < timeout + 1       # plus one second from socket timeout
+
+        # this time there are some more log from the other processes
+        assert 'worker complete' in data

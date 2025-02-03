@@ -120,7 +120,7 @@ def merge_config(from_file: dict, from_func: dict) -> dict:
                     full_context=0, suppress=None,
                     suppress_level_below=logging.WARNING, use_multiprocessing=False,
                     limit_line_length=1000, analyze_raise_statement=False,
-                    host=None, port=None,
+                    host=None, port=None, server_timeout=5,
                     )
     merged = {}
     for key, val in defaults.items():
@@ -180,6 +180,8 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
         :key analyze_raise_statement: bool, should the variables in `raise` exception line be shown or not.
         :key host: str, default to 'localhost'. Used in multiprocessing logging
         :key port: int, default to logging.handlers.DEFAULT_TCP_LOGGING_PORT. Used in multiprocessing logging
+        :key server_timeout: float, default to 5 seconds waiting for the last log to be received
+                        through socket. Used in multiprocessing logging
     """
 
     if config_path:

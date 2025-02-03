@@ -24,4 +24,5 @@ def setup_logging(config_path: str = "", log_path: str = "",
                   limit_line_length: int = 1000,
                   analyze_raise_statement: bool = False,
                   host: str = None,
-                  port: int = None) -> LogConfig: ...
+                  port: int = None,
+                  server_timeout: float = 5) -> LogConfig: ...

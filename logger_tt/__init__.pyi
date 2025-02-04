@@ -25,4 +25,5 @@ def setup_logging(config_path: str = "", log_path: str = "",
                   analyze_raise_statement: bool = False,
                   host: str = None,
                   port: int = None,
-                  server_timeout: float = 5) -> LogConfig: ...
+                  server_timeout: float = 5,
+                  client_only: bool = False) -> LogConfig: ...

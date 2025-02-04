@@ -78,6 +78,8 @@
     "analyze_raise_statement": false,
     "host": "",
     "port": 0,
+    "server_timeout": 5,
+    "client_only": false,
     "default_logger_formats": {
       "normal": ["%(name)s", "%(filename)s"],
       "thread": ["%(message)s", "%(threadName)s %(message)s"],

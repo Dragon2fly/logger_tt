@@ -120,7 +120,7 @@ def merge_config(from_file: dict, from_func: dict) -> dict:
                     full_context=0, suppress=None,
                     suppress_level_below=logging.WARNING, use_multiprocessing=False,
                     limit_line_length=1000, analyze_raise_statement=False,
-                    host=None, port=None, server_timeout=5,
+                    host=None, port=None, server_timeout=5, client_only=False,
                     )
     merged = {}
     for key, val in defaults.items():
@@ -157,6 +157,21 @@ def remove_unused_handlers(config: dict):
     return unused_handlers
 
 
+def _get_config(config_path):
+    if config_path:
+        cfgpath = Path(config_path)
+        assert cfgpath.is_file(), f'Input config path is not a file: "{cfgpath.absolute()}"'
+        assert cfgpath.suffix in ['.yaml', '.json', '.yml'], 'Config file type must be either yaml, yml or json!'
+        assert cfgpath.exists(), f'Config file path not exists! {cfgpath.absolute()}'
+    else:
+        cfgpath = Path(__file__).parent / 'log_config.json'
+
+    # load config from file
+    config = load_from_file(cfgpath)
+    remove_unused_handlers(config)
+    return config, cfgpath
+
+
 def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config) -> LogConfig:
     """Setup logging configuration
 
@@ -171,7 +186,7 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
         :key guess_level  : bool, auto guess logging level of captured message
         :key full_context : int, whether to log full local scope on exception or not and up to what level
         :key suppress     : list[str], name of loggers to be suppressed.
-        :key suppress_level_below: int, for logger in the suppress list,
+        :key suppress_level_below: int, for logger in the suppression list,
                                     any message below this level is not processed, not printed out nor logged to file
         :key use_multiprocessing : bool or str, set this to True if your code use multiprocessing.
                                     This flag switches the queue used for logging from
@@ -182,19 +197,12 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
         :key port: int, default to logging.handlers.DEFAULT_TCP_LOGGING_PORT. Used in multiprocessing logging
         :key server_timeout: float, default to 5 seconds waiting for the last log to be received
                         through socket. Used in multiprocessing logging
+        :key client_only: bool, default to False. True to not starting the listener server.
+                        Use in case of multiple applications that want to log to a central destination.
     """
 
-    if config_path:
-        cfgpath = Path(config_path)
-        assert cfgpath.is_file(), f'Input config path is not a file: "{cfgpath.absolute()}"'
-        assert cfgpath.suffix in ['.yaml', '.json', '.yml'], 'Config file type must be either yaml, yml or json!'
-        assert cfgpath.exists(), f'Config file path not exists! {cfgpath.absolute()}'
-    else:
-        cfgpath = Path(__file__).parent / 'log_config.json'
+    config, cfgpath = _get_config(config_path)
 
-    # load config from file
-    config = load_from_file(cfgpath)
-    remove_unused_handlers(config)
     logger_tt_cfg = config.pop('logger_tt', {})
     if in_main_process():
         ensure_path(config, log_path)   # create log path if not exist
@@ -217,13 +225,20 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
         else:
             logging.config.dictConfig(config)
 
-        if in_main_process():
+        # merge config from config file and function arguments
+        iconfig = merge_config(logger_tt_cfg, logger_tt_config)
+        is_mp_client = iconfig['use_multiprocessing'] and iconfig['client_only']
+
+        if in_main_process() and not is_mp_client:
             logging.debug('New log started'.center(50, '_'))
             logging.debug(f'Log config file: {cfgpath}')
 
-        # set internal config
-        iconfig = merge_config(logger_tt_cfg, logger_tt_config)
+        # do sophisticated internal config
         internal_config.from_dict(iconfig)
+
+        if is_mp_client:
+            logging.debug(f"MP client's log config file: {cfgpath}")
+
     except Exception as e:
         internal_config.remove_logging_level('NOTICE')
         raise

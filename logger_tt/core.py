@@ -111,11 +111,11 @@ class LogConfig:
         self.server_timeout = max(1, odict.get('server_timeout', 0))
 
         # set logging mode accordingly
-        self._set_mode(odict['use_multiprocessing'])
+        self._set_mode(odict['use_multiprocessing'], odict['client_only'])
 
         self.__initialized += 1
 
-    def _set_mode(self, use_multiprocessing):
+    def _set_mode(self, use_multiprocessing, client_only: bool):
         """Select logging method according to platform and multiprocessing"""
         os_name = platform.system()
         if use_multiprocessing not in [True, False, 'fork', 'spawn', 'forkserver']:
@@ -134,10 +134,10 @@ class LogConfig:
             else:
                 # __main__ is imported from crash for each child process
                 # so we must use socket to communicate between processes
-                self._replace_with_socket_handler()
+                self._replace_with_socket_handler(client_only)
 
     def _replace_with_queue_handler(self):
-        """ setup a central queue handler and start a listener thread """
+        """ set up a central queue handler and start a listener thread """
         all_loggers = [root_logger] + [logging.getLogger(name) for name in root_logger.manager.loggerDict]
 
         for logger in all_loggers:
@@ -163,9 +163,8 @@ class LogConfig:
 
         root_logger.debug('Logging queue listener started!')
 
-    def _replace_with_socket_handler(self):
+    def _replace_with_socket_handler(self, client_only: bool):
         """ setup a central socket handler and start a listener server """
-        # logger = logging.getLogger()
 
         # backup current handlers
         all_handlers = root_logger.handlers
@@ -175,22 +174,25 @@ class LogConfig:
 
         # initiate server
         if in_main_process():
-            self.tcp_server = LogRecordSocketReceiver(self._host, self._port, all_handlers, self.server_timeout)
-            serving = Thread(target=self.tcp_server.serve_until_stopped)
-            serving.start()
+            if not client_only:
+                self.tcp_server = LogRecordSocketReceiver(self._host, self._port, all_handlers, self.server_timeout)
+                serving = Thread(target=self.tcp_server.serve_until_stopped)
+                serving.start()
 
-            host, port = self.tcp_server.socket.getsockname()
-            self._port = port   # get the real port number in case user used "0"
+                host, port = self.tcp_server.socket.getsockname()
+                self._port = port   # get the real port number in case user used "0"
 
-            # set environ variable for child processes
-            pid = current_process().pid
-            os.environ[self.env_port_var.format(pid)] = str(port)
+                # set environ variable for child processes
+                pid = current_process().pid
+                os.environ[self.env_port_var.format(pid)] = str(port)
+
+                # log info
+                root_logger.debug('Logging server started!')
+                root_logger.debug(f'Server port: {self._port}')
 
             # add socket handler
-            socket_handler = logging.handlers.SocketHandler(self._host, port)
+            socket_handler = logging.handlers.SocketHandler(self._host, self._port)
             root_logger.addHandler(socket_handler)
-            root_logger.debug('Logging server started!')
-            root_logger.debug(f'Server port: {port}')
         else:
             # add socket handler
             parent_pid = os.getppid()

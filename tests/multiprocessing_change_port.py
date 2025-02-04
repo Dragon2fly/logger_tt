@@ -14,7 +14,7 @@ config = setup_logging(config_path="multiprocessing_change_port.yaml")
 
 def worker(arg):
     logger.info(f'child process {arg}: started')
-    time.sleep(randint(3, 10))
+    time.sleep(randint(1, 5))
     logger.info(f'child process {arg}: stopped')
 
 

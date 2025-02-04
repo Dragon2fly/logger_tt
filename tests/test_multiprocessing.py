@@ -2,47 +2,15 @@ import re
 import sys
 
 import pytest
-from ruamel.yaml import YAML
 from subprocess import run, PIPE
 from pathlib import Path
-from contextlib import contextmanager
-from typing import List
 from logger_tt import setup_logging
+from tests.utils import config_modified
+
 
 __author__ = "Duc Tin"
 
 log = Path.cwd() / 'logs/log.txt'
-
-
-@contextmanager
-def config_modified(out_name: str, key_val: List[tuple]) -> Path:
-    # read in default config
-    yaml = YAML(typ='safe')
-    config_file = Path("../logger_tt/log_config.yaml")
-    log_config = yaml.load(config_file.read_text())
-
-    # update config
-    for key, val in key_val:
-        path = key.split("/")
-        ob = log_config
-        while len(path) > 1:
-            k = path.pop(0)
-            try:
-                ob = ob[k]
-            except KeyError:
-                ob[k] = None
-
-        last_k = path[0]
-        ob[last_k] = val
-
-    # write the config out
-    test_config = Path(out_name)
-    yaml.dump(data=log_config, stream=test_config)
-    try:
-        yield test_config
-    finally:
-        # delete it
-        test_config.unlink()
 
 
 def test_multiprocessing_normal():

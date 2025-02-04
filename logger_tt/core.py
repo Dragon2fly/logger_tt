@@ -5,10 +5,15 @@ import logging
 import atexit
 import platform
 import time
+import pickle
+import socketserver
+import struct
+import select
 from logging import handlers
 from multiprocessing import Queue as mpQueue, current_process
 from queue import Queue as thQueue
 from threading import Thread, main_thread
+from contextlib import contextmanager
 
 import pickle
 import socketserver
@@ -31,6 +36,16 @@ def in_main_process() -> bool:
     condition2 = not (len(sys.argv) >= 2 and sys.argv[1] == '--multiprocessing-fork')
     # print('is_main_process:', condition1 and condition2, current_process().name, current_process().pid, sys.argv)
     return condition1 and condition2
+
+
+@contextmanager
+def temporary_logger(logger, temp_handlers: list):
+    org_handlers = root_logger.handlers
+    logger.handlers = temp_handlers
+    try:
+        yield
+    finally:
+        logger.handlers = org_handlers
 
 
 class LogConfig:
@@ -383,6 +398,8 @@ class LogRecordSocketReceiver(socketserver.ThreadingTCPServer):
     # being processed
 
     def __init__(self, host, port, log_record_handlers, last_log_timeout):
+        self.log_handlers = log_record_handlers
+
         # update handler class
         LogRecordStreamHandler.handlers = log_record_handlers
         LogRecordStreamHandler.timeout = last_log_timeout
@@ -392,7 +409,7 @@ class LogRecordSocketReceiver(socketserver.ThreadingTCPServer):
         self.last_log_timeout = last_log_timeout
 
         # timeout for select.select()
-        self.timeout = 1
+        self.select_timeout = 1
 
     def serve_until_stopped(self):
 
@@ -401,8 +418,8 @@ class LogRecordSocketReceiver(socketserver.ThreadingTCPServer):
             if not main_exited_at and not main_thread().is_alive():
                 # record the time that the dead of the main thread is detected
                 main_exited_at = time.time()
-                root_logger.handlers = self.RequestHandlerClass.handlers
-                root_logger.debug(f'Detected main thread death at timestamp: {main_exited_at}')
+                with temporary_logger(root_logger, self.log_handlers):
+                    root_logger.debug(f'Detected main thread death at timestamp: {main_exited_at}')
 
             # calculate the uptime
             dt = time.time() - main_exited_at
@@ -410,13 +427,14 @@ class LogRecordSocketReceiver(socketserver.ThreadingTCPServer):
             # exit if main exited and uptime is too long
             if main_exited_at and dt > self.last_log_timeout:
                 self_exit_at = time.time()
-                root_logger.debug(f'Logger server exited at timestamp: {self_exit_at}')
+                with temporary_logger(root_logger, self.log_handlers):
+                    root_logger.debug(f'Logger server exited at timestamp: {self_exit_at}')
                 break
 
             # else serve the request if any
             rd, wr, ex = select.select([self.socket.fileno()],
                                        [], [],
-                                       self.timeout)
+                                       self.select_timeout)
             if rd:
                 self.handle_request()
 

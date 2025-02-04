@@ -15,11 +15,6 @@ from queue import Queue as thQueue
 from threading import Thread, main_thread
 from contextlib import contextmanager
 
-import pickle
-import socketserver
-import struct
-import select
-
 from .capture import PrintCapture
 
 __author__ = "Duc Tin"

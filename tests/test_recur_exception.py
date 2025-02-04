@@ -6,7 +6,7 @@ from subprocess import run
 __author__ = "ZeroRin"
 log = Path.cwd() / 'logs/log.txt'
 
-TRACE=r'''Traceback \(most recent call last\):
+TRACE = r'''Traceback \(most recent call last\):
   File ".+?", line \d+?, in foo
     raise RuntimeError\(a\)
      |-> a = 1
@@ -31,12 +31,14 @@ Traceback \(most recent call last\):
      |-> c = 3
 RuntimeError: 3'''
 
+
 def test_recur_exception_caught():
     cmd = [sys.executable, "exception_on_exception.py", "caught"]
     run(cmd)
     data = log.read_text()
     pattern = rf'Caught exception\n{TRACE}'
     assert re.search(pattern, data, re.DOTALL)
+
 
 def test_recur_exception_uncaught():
     cmd = [sys.executable, "exception_on_exception.py", "uncaught"]

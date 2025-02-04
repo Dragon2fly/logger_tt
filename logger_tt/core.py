@@ -108,7 +108,7 @@ class LogConfig:
         # host, port, and waiting time before exit for multiprocessing logging
         self._host = odict.get('host') or 'localhost'
         self._port = odict.get('port', handlers.DEFAULT_TCP_LOGGING_PORT)
-        self.server_timeout = max(1, odict.get('server_timeout', 0))
+        self.server_timeout = max(1, int(odict.get('server_timeout', 0)))
 
         # set logging mode accordingly
         self._set_mode(odict['use_multiprocessing'], odict['client_only'])
@@ -166,15 +166,12 @@ class LogConfig:
     def _replace_with_socket_handler(self, client_only: bool):
         """ setup a central socket handler and start a listener server """
 
-        # backup current handlers
-        all_handlers = root_logger.handlers
-
-        # clear all handlers
-        root_logger.handlers = []
-
         # initiate server
         if in_main_process():
             if not client_only:
+                # backup current handlers
+                all_handlers = root_logger.handlers
+
                 self.tcp_server = LogRecordSocketReceiver(self._host, self._port, all_handlers, self.server_timeout)
                 serving = Thread(target=self.tcp_server.serve_until_stopped)
                 serving.start()
@@ -192,12 +189,14 @@ class LogConfig:
 
             # add socket handler
             socket_handler = logging.handlers.SocketHandler(self._host, self._port)
+            root_logger.handlers = []
             root_logger.addHandler(socket_handler)
         else:
             # add socket handler
             parent_pid = os.getppid()
             port = os.environ.get(self.env_port_var.format(parent_pid), self._port)
             socket_handler = logging.handlers.SocketHandler(self._host, int(port))
+            root_logger.handlers = []
             root_logger.addHandler(socket_handler)
             root_logger.debug(f'Child picked up port: {port}')
 

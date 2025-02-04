@@ -1,12 +1,12 @@
 import json
 from contextlib import contextmanager
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 from ruamel.yaml import YAML
 
 
-def obj_retriever(obj: dict, key_path: str) -> tuple[dict, str]:
+def obj_retriever(obj: dict, key_path: str) -> Tuple[dict, str]:
     ob = obj
     path = key_path.split("/")
     while len(path) > 1:

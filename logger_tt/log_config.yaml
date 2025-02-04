@@ -70,8 +70,8 @@ logger_tt:
   analyze_raise_statement: False
   host: ""
   port: 0
-  server_timeout: 5,
-  client_only: false,
+  server_timeout: 5
+  client_only: false
   default_logger_formats:
     normal: ["%(name)s", "%(filename)s"]
     thread: ["%(message)s", "%(threadName)s %(message)s"]

@@ -1,6 +1,11 @@
 import sys
 import logging
 from .inspector import analyze_exception_recur
+from string import Template
+
+__author__ = "Duc Tin"
+
+PY_VER = sys.version_info.major, sys.version_info.minor
 
 
 class ExceptionLogger(logging.Logger):
@@ -31,6 +36,7 @@ class ExceptionLogger(logging.Logger):
 
     def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None, extra=None, sinfo=None):
         record = super().makeRecord(name, level, fn, lno, msg, args, exc_info, func, extra, sinfo)
+        record.kwargs = self.msg_kwargs
 
         if name == 'logger_tt':
             # try to get the __name__ of the module that use the default logger: logger_tt
@@ -48,14 +54,21 @@ class ExceptionLogger(logging.Logger):
 
             record.filename = qualified_name or record.filename
 
-            record.kwargs = self.msg_kwargs
-
         return record
 
     def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False,
-             stacklevel=1, **kwargs):
+             stacklevel=2, **kwargs):
+        # Here we override the original method to be able to save the kwargs that
+        # the original method omits when create a LogRecord
         self.msg_kwargs = kwargs
-        super()._log(level, msg, args, exc_info, extra, stack_info, stacklevel)
+
+        # Notice that stacklevel is default to 2 instead of 1
+        # This is for self.findCaller to find the true caller of the log
+        # instead of this overridden method
+        if PY_VER > (3, 7):
+            super()._log(level, msg, args, exc_info, extra, stack_info, stacklevel)
+        else:
+            super()._log(level, msg, args, exc_info, extra, stack_info)
 
 
 class DefaultLogRecord(logging.LogRecord):
@@ -80,6 +93,19 @@ class DefaultLogRecord(logging.LogRecord):
             msg = msg.format(*self.args)
         return msg
 
+    def get_message_dollar(self):
+        """
+        Return the message for this LogRecord.
+
+        Return the message for this LogRecord after merging any user-supplied
+        arguments with the message.
+        """
+        msg = str(self.msg)
+        if self.kwargs:
+            msg = Template(msg).safe_substitute(self.kwargs)
+
+        return msg
+
     def get_message_percent(self):
         """
         Return the message for this LogRecord.
@@ -96,6 +122,8 @@ class DefaultLogRecord(logging.LogRecord):
     def set_style(cls, style: str):
         if style == '%':
             cls.getMessage = cls.get_message_percent
+        elif style == '$':
+            cls.getMessage = cls.get_message_dollar
         elif style == '{':
             cls.getMessage = cls.get_message_brace
         else:
@@ -126,6 +154,10 @@ class DefaultFormatter(logging.Formatter):
             for key, val in self.default_formats.items():
                 brace_fmt = [x.replace('%(', '{').replace(')s', '}') for x in val]
                 self.default_formats[key] = brace_fmt
+        elif style == '$':
+            for key, val in self.default_formats.items():
+                dollar_fmt = [x.replace('%(', '${').replace(')s', '}') for x in val]
+                self.default_formats[key] = dollar_fmt
         else:
             pass
 

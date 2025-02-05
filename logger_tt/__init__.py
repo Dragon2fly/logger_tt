@@ -7,7 +7,8 @@ from logging.config import dictConfig
 from pathlib import Path
 from typing import *
 
-from .core import DefaultFormatter, LogConfig, in_main_process
+from .enhanced_class import ExceptionLogger, DefaultLogRecord, DefaultFormatter
+from .core import LogConfig, in_main_process
 from .inspector import analyze_exception_recur, logging_disabled
 
 __author__ = "Duc Tin"
@@ -107,7 +108,7 @@ def load_from_file(f: Path) -> dict:
     DefaultFormatter.default_formats.update(dlf)
     for formatter in dict_cfg['formatters'].values():
         if not formatter.get('class'):
-            formatter['class'] = 'logger_tt.core.DefaultFormatter'
+            formatter['class'] = 'logger_tt.enhanced_class.DefaultFormatter'
 
     return dict_cfg
 
@@ -249,53 +250,6 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
     return internal_config
 
 
-class ExceptionLogger(logging.Logger):
-    """Modify the `exception` func so that it print out context too
-        This allows user do a try-except in outer code but still has the full log
-        of nested code's error
-        Example:
-            try:
-                a, b = 1, 0
-            except Exception as e:
-                logger.exception(e)
-            # then move on
-    """
-
-    _logger_names = {}
-
-    def exception(self, msg, *args, exc_info=True, **kwargs):
-        if exc_info:
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            full_context = internal_config.full_context
-            limit_length = internal_config.limit_line_length
-            analyze_raise = internal_config.analyze_raise_statement
-            txt = analyze_exception_recur(exc_value, full_context, limit_length, analyze_raise)
-            logging.error(f'{msg}\n{txt}')
-        else:
-            logging.error(msg, *args, exc_info=exc_info, **kwargs)
-
-    def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None, extra=None, sinfo=None):
-        record = super().makeRecord(name, level, fn, lno, msg, args, exc_info, func, extra, sinfo)
-
-        if name == 'logger_tt':
-            # try to get the __name__ of the module that use the default logger: logger_tt
-            pathname = fn.replace('\\', '/')
-            qualified_name = self._logger_names.get(pathname)
-            if not qualified_name:
-                for qualified_name, module in sys.modules.items():
-                    file = getattr(module, '__file__', None)
-                    if file and file.replace('\\', '/') == pathname:
-                        self._logger_names[pathname] = qualified_name
-                        break
-
-            if qualified_name == '__main__' and record.processName != 'MainProcess':
-                qualified_name = '__mp_main__'
-
-            record.filename = qualified_name or record.filename
-
-        return record
-
-
 def logger_tt_filter(record):
     if record.filename not in internal_config.suppress_list:
         return True
@@ -303,7 +257,13 @@ def logger_tt_filter(record):
         return True
 
 
+# enhance logger class
+ExceptionLogger.config = internal_config
+
+# update base factory
 logging.setLoggerClass(ExceptionLogger)
+logging.setLogRecordFactory(DefaultLogRecord)
+
 logger = getLogger('logger_tt')  # pre-made default logger for all modules
 logger.setLevel(logging.DEBUG)
 logger.addFilter(logger_tt_filter)

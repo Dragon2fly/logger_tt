@@ -44,9 +44,9 @@ def test_style_dollar(capsys, this_logger):
     with config_modified(
             'style_brace_config.yaml',
             [('formatters/simple/style', '$'),
-             ('formatters/simple/format', '[${asctime}] ${name}:${lineno} ${levelname} ${message}'),
+             ('formatters/simple/format', '[${asctime}] $name:$lineno ${levelname} ${message}'),
              ('formatters/brief/style', '$'),
-             ('formatters/brief/format', '[${asctime}] ${levelname} ${message}')
+             ('formatters/brief/format', '[${asctime}] $levelname $message')
              ]):
 
         with setup_logging(config_path='style_brace_config.yaml'):
@@ -63,5 +63,3 @@ def test_style_dollar(capsys, this_logger):
         log_data = log.read_text()
         assert re.search(r'test_issue22_style:\d+ CRITICAL hello2 world', log_data)
         assert re.search(r'test_issue22_style:\d+ CRITICAL hello3 beautiful world', log_data)
-
-

@@ -1,3 +1,4 @@
+import re
 import sys
 import logging
 from .inspector import analyze_exception_recur
@@ -143,31 +144,81 @@ class DefaultFormatter(logging.Formatter):
                            both=["%(message)s", "%(processName)s %(threadName)s %(message)s"])
 
     def __init__(self, fmt: str = '', datefmt: str = '', style: str = '%'):
-        self._check_style(style)
+        # check the format string and the style
         super(DefaultFormatter, self).__init__(fmt=fmt, datefmt=datefmt, style=style)
 
+        # Set the correct message factory according to the style
+        DefaultLogRecord.set_style(style)
+
+        # update default_formats according to style
+        if style != '%':
+            for key, val in self.default_formats.items():
+                self.default_formats[key] = [self.convert_fmt_style(f, style) for f in val]
+
+        # now prepare the formatter objects
         self._logger_tt_formatters = {}
-        for case, fmt in self._standardize(fmt).items():
+        for case, fmt in self._standardize(fmt, style).items():
             self._logger_tt_formatters[case] = logging.Formatter(fmt=fmt, datefmt=datefmt, style=style)
 
-    def _check_style(self, style):
-        DefaultLogRecord.set_style(style)
-        if style == '{':
-            for key, val in self.default_formats.items():
-                brace_fmt = [x.replace('%(', '{').replace(')s', '}') for x in val]
-                self.default_formats[key] = brace_fmt
-        elif style == '$':
-            for key, val in self.default_formats.items():
-                dollar_fmt = [x.replace('%(', '${').replace(')s', '}') for x in val]
-                self.default_formats[key] = dollar_fmt
-        else:
+    @staticmethod
+    def get_style_of(fmt: str) -> str:
+        if re.search(r'%\([a-z]+\)[sfd]', fmt):
+            # classic style
+            return '%'
+        if re.search(r'\${[a-z]+}', fmt):
+            # str.Template() style
+            return '$'
+        if re.search(r'{[a-z]+(:[ 0-9fdx.]+)?}', fmt):
+            # str.format() style
+            return '{'
+
+    def convert_fmt_style(self, fmt, style) -> str:
+        """A simple format style converter"""
+        org_style = self.get_style_of(fmt)
+        res = fmt
+
+        if org_style == style:
             pass
 
-    def _standardize(self, fmt):
+        elif org_style == '%':
+            if style == '{':
+                res = re.sub(r'%\((\w+)\)s', r'{\1}', res)
+                res = re.sub(r'%\((\w+)\)(\d*?)([df])', r'{\1:\2\3}', res)
+            elif style == '$':
+                res = re.sub(r'%\((\w+)\)[0-9.]*?[sdf]', r'${\1}', res)
+            else:
+                pass
+
+        elif org_style == '$':
+            if style == '{':
+                res = re.sub(r'\${?(\w+)}?', r'{\1}', res)
+            elif style == '%':
+                res = re.sub(r'\${?(\w+)}?', r'%(\1)', res)
+            else:
+                pass
+
+        elif org_style == '{':
+            if style == '$':
+                res = re.sub(r'{(\w+)(:\w+)?}', r'${\1}', res)
+            elif style == '%':
+                res = re.sub(r'{(\w+):[0-9.<>]+([fd])}', r'%(\1)\2', res)
+                res = re.sub(r'{(\w+)}', r'%(\1)s', res)
+            else:
+                pass
+
+        return res
+
+    def _standardize(self, fmt, style):
+        # unify $ format
+        if style == '$':
+            fmt = re.sub(r'\$([a-z]+)', r'${\1}', fmt)
+
         formatters = {'normal': fmt.replace(self.default_formats['normal'][0], self.default_formats['normal'][1])}
 
         # concurrent format
-        concurrent_fmt = formatters['normal'].replace('%(threadName)s', '').replace('%(processName)s', '')
+        tn = self.convert_fmt_style('%(threadName)s', style)
+        pn = self.convert_fmt_style('%(processName)s', style)
+        concurrent_fmt = formatters['normal'].replace(tn, '').replace(pn, '')
         for _type, replacement in self.default_formats.items():
             if _type == 'normal':
                 continue

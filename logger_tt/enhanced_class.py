@@ -59,7 +59,9 @@ class ExceptionLogger(logging.Logger):
     def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False,
              stacklevel=2, **kwargs):
         # Here we override the original method to be able to save the kwargs that
-        # the original method omits when create a LogRecord
+        # the original method omits when create a LogRecord.
+        # "extra" argument could be updated too but that is for other placeholders in
+        # the format string, not specific to the message.
         self.msg_kwargs = kwargs
 
         # Notice that stacklevel is default to 2 instead of 1

@@ -5,6 +5,7 @@ import time
 
 from io import StringIO, BytesIO
 from logging import getLogger, DEBUG, Formatter
+from urllib import request, error as request_error
 
 import pytest
 from logger_tt.handlers import StreamHandlerWithBuffer, TelegramHandler, parse
@@ -110,23 +111,26 @@ def test_telegram_handler_basic(unique_id):
         handler.close()
 
 
-def test_telegram_handler_error(caplog):
-    bot_token = ''
-    user_id = '123456789'
-    logger = getLogger('test telegram 0')
-    handler = TelegramHandler(token=bot_token, unique_ids=user_id, debug=True, check_interval=0.5)
+def set_telegram_handler(log_name, bot_token='', user_id='123456789', **kwargs):
+    logger = getLogger(log_name)
+    handler = TelegramHandler(token=bot_token, unique_ids=user_id, debug=True, **kwargs)
     formatter = Formatter(fmt="[%(asctime)s.%(msecs)03d] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.propagate = False
     getLogger().setLevel(0)
+    return logger, handler
 
+
+def mock_urlopen(status_code, url_snipping: StringIO):
     # setup stub function
-    from urllib import request, error
 
-    def fake_urlopen(*arg, **kwargs):
-        if code != 200:
-            raise error.HTTPError('fake_url', code=code, msg='fake_url raised error', hdrs={}, fp=None)
+    def fake_urlopen(url: str, *arg, **kwargs):
+        url_snipping.write(url + '\n\n')
+
+        if status_code != 200:
+            raise request_error.HTTPError('fake_url', code=status_code,
+                                          msg='fake_url raised error', hdrs={}, fp=None)
         else:
             my_stream = BytesIO()
             my_stream.write(b'{"ok": "true"}')
@@ -136,56 +140,44 @@ def test_telegram_handler_error(caplog):
     request.urlopen = fake_urlopen
     # stub done
 
-    code = 403
+
+def test_telegram_handler_error(caplog):
+    # setup handler
+    user_id = '123456789'
+    logger, handler = set_telegram_handler('test telegram 0', user_id=user_id, check_interval=0.5)
+
+    mock_urlopen(status_code=403, url_snipping=StringIO())
     logger.warning('user blocked this bot')
     assert 'HTTP Error 403' in caplog.text
-    assert not handler.cache[user_id]
+    assert not handler.message_queue[user_id]
+    assert not handler.failed_messages[user_id]
 
-    code = 500
+    mock_urlopen(status_code=500, url_snipping=StringIO())
     logger.error('server error')
-    assert handler.cache[user_id]
-    code = 200
+    assert not handler.message_queue[user_id]
+    assert handler.failed_messages[user_id]
 
+    mock_urlopen(status_code=200, url_snipping=StringIO())
     for retry in range(2):
         try:
             time.sleep(1.5)
-            assert not handler.cache[user_id]
+            assert not handler.message_queue[user_id]
             break
         except AssertionError:
             continue
     else:
-        assert not handler.cache[user_id]
+        assert not handler.message_queue[user_id]
     assert 'HTTP Error 500' in caplog.text
     assert 'found unsent messages' in caplog.text
 
 
 def test_telegram_handler_repeated_msg_continuous(caplog):
-    bot_token = ''
-    user_id = '123456789'
-    logger = getLogger('test telegram 1')
-    handler = TelegramHandler(token=bot_token, unique_ids=user_id, debug=True, check_interval=1)
-    formatter = Formatter(fmt="[%(asctime)s.%(msecs)03d] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.propagate = False
-    getLogger().setLevel(0)
+    # setup handler
+    logger, handler = set_telegram_handler('test telegram 1', check_interval=1)
 
     # setup
-    from urllib import request, error
-    code = 200
     log_sent = StringIO()
-
-    def fake_urlopen(url: str, *args, **kwargs):
-        if code != 200:
-            raise error.HTTPError('fake_url', code=code, msg='fake_url raised error', hdrs={}, fp=None)
-        else:
-            log_sent.write(url+'\n\n')
-            my_stream = BytesIO()
-            my_stream.write('{"ok": "true"}\n'.encode())
-            my_stream.seek(0)
-            return my_stream
-
-    request.urlopen = fake_urlopen
+    mock_urlopen(status_code=200, url_snipping=log_sent)
 
     # run repeat the same message continuously
     for i in range(1000):
@@ -202,35 +194,14 @@ def test_telegram_handler_repeated_msg_continuous(caplog):
 
 
 def test_telegram_handler_repeated_msg_then_change(caplog):
-    bot_token = ''
-    user_id = '123456789'
-    logger = getLogger('test telegram 2')
-    handler = TelegramHandler(token=bot_token, unique_ids=user_id, debug=True, check_interval=1)
-    formatter = Formatter(fmt="[%(asctime)s.%(msecs)03d] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.propagate = False
-    getLogger().setLevel(0)
+    # setup handler
+    logger, handler = set_telegram_handler('test telegram 2', check_interval=1)
 
     # setup
-    from urllib import request, error
-    code = 200
     log_sent = StringIO()
-
-    def fake_urlopen(url: str, *args, **kwargs):
-        if code != 200:
-            raise error.HTTPError('fake_url', code=code, msg='fake_url raised error', hdrs={}, fp=None)
-        else:
-            log_sent.write(url+'\n\n')
-            my_stream = BytesIO()
-            my_stream.write('{"ok": "true"}\n'.encode())
-            my_stream.seek(0)
-            return my_stream
-
-    request.urlopen = fake_urlopen
+    mock_urlopen(status_code=200, url_snipping=log_sent)
 
     # run repeat the same message for a while then different message
-    log_sent = StringIO()
     for i in range(10):
         logger.warning(f'Connection error: server 500. Retry')
     else:
@@ -250,35 +221,14 @@ def test_telegram_handler_repeated_msg_then_change(caplog):
 
 
 def test_telegram_handler_grouping_msg_normal(caplog):
-    bot_token = ''
-    user_id = '123456789'
-    logger = getLogger('test telegram 3')
-    handler = TelegramHandler(token=bot_token, unique_ids=user_id, debug=True, check_interval=10, grouping_interval=1)
-    formatter = Formatter(fmt="[%(asctime)s.%(msecs)03d] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.propagate = False
-    getLogger().setLevel(0)
+    # setup handler
+    logger, handler = set_telegram_handler('test telegram 3', check_interval=10, grouping_interval=1)
 
     # setup
-    from urllib import request, error
-    code = 200
     log_sent = StringIO()
-
-    def fake_urlopen(url: str, *args, **kwargs):
-        if code != 200:
-            raise error.HTTPError('fake_url', code=code, msg='fake_url raised error', hdrs={}, fp=None)
-        else:
-            log_sent.write(parse.unquote_plus(url)+'\n\n')
-            my_stream = BytesIO()
-            my_stream.write('{"ok": "true"}\n'.encode())
-            my_stream.seek(0)
-            return my_stream
-
-    request.urlopen = fake_urlopen
+    mock_urlopen(status_code=200, url_snipping=log_sent)
 
     # run repeat the same message for a while then different message
-    log_sent = StringIO()
     for i in range(10):
         # first group
         logger.warning(f'Connection error: server 500. Retry {i+1} time')
@@ -296,42 +246,20 @@ def test_telegram_handler_grouping_msg_normal(caplog):
     log_sent.seek(0)
     data = log_sent.read()
     count = data.count('https')
-    # print(data)
     assert count == 3, 'There should be 3 groups of http request'
 
 
 def test_telegram_handler_grouping_msg_resend(caplog):
-    bot_token = ''
-    user_id = '123456789'
-    logger = getLogger('test telegram 3')
-    handler = TelegramHandler(token=bot_token, unique_ids=user_id, debug=True, check_interval=10, grouping_interval=1)
-    formatter = Formatter(fmt="[%(asctime)s.%(msecs)03d] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.propagate = False
-    getLogger().setLevel(0)
+    # setup handler
+    logger, handler = set_telegram_handler('test telegram 4', check_interval=10, grouping_interval=1)
 
     # setup
-    from urllib import request, error
-    code = 414
     log_sent = StringIO()
-
-    def fake_urlopen(url: str, *args, **kwargs):
-        if code != 200:
-            log_sent.write(url)
-            raise error.HTTPError('fake_url', code=code, msg='fake_url raised error', hdrs={}, fp=None)
-        else:
-            log_sent.write(parse.unquote_plus(url) + '\n\n')
-            my_stream = BytesIO()
-            my_stream.write('{"ok": "true"}\n'.encode())
-            my_stream.seek(0)
-            return my_stream
-
-    request.urlopen = fake_urlopen
+    mock_urlopen(status_code=414, url_snipping=log_sent)
 
     # run repeat the same message for a while then different message
-    log_sent = StringIO()
-    logger.warning(f'Connection error: server 500. Retry {100} time')
+    for i in range(100):
+        logger.warning(f'Connection error: server 500. Retry {i} time')
 
     # first sent
     time.sleep(6)  # let watcher run
@@ -342,5 +270,4 @@ def test_telegram_handler_grouping_msg_resend(caplog):
     log_sent.seek(0)
     data = log_sent.read()
     count = data.count('%0A')
-    # print(data)
-    assert count == 0, 'Grouped message should not be regrouped again'
+    assert count == 98, 'Grouped message should not be regrouped again'

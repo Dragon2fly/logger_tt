@@ -1145,7 +1145,7 @@ logger_tt:
   * Handlers from all loggers other than the root were mistakenly added to the root's handlers. 
   This bug prevents the removal of handlers out of the root, 
   thus the log message was doubled if another different handler is used. 
-  Now root's handlers are correctly added or removed. 
+  Now root's handlers are correctly added or removed (thank ZeroRin). 
 * Usability:
   * Multiprocessing:
     * Changed the method of detecting child process, potentially fix all issues related to multiprocessing and pyinstaller

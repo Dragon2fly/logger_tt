@@ -5,7 +5,7 @@ description = "Make logging simple, log even exception that you forgot to catch.
 readme = "README.md"
 requires-python = ">=3.6"
 authors = [{name = "Nguyen Ba Duc Tin", email = "nguyenbaduc.tin@gmail.com"}]
-license = "MIT"
+license-files = { paths = ["LICENSE"] }
 keywords = ["logging", "logger", "debugger", "multiprocessing"]
 classifiers = [
     "License :: OSI Approved :: MIT License",

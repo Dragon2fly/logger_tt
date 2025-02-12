@@ -1031,6 +1031,8 @@ logger_tt:
   use_multiprocessing: False
   limit_line_length: 1000
   analyze_raise_statement: False
+  server_timeout: 5
+  client_only: false
   default_logger_formats:
     normal: ["%(name)s", "%(filename)s"]
     thread: ["%(message)s", "%(threadName)s %(message)s"]
@@ -1119,7 +1121,11 @@ logger_tt:
    "full_context": 0,
    "use_multiprocessing": false,
    "limit_line_length": 1000,
-   "analyze_raise_statement": false,
+   "analyze_raise_statement": false, 
+   "host": "",
+   "port": 0,
+   "server_timeout": 5,
+   "client_only": false,
    "default_logger_formats": {
       "normal": ["%(name)s", "%(filename)s"],
       "thread": ["%(message)s", "%(threadName)s %(message)s"],
@@ -1132,14 +1138,28 @@ logger_tt:
 
 # Changelog
 ## 1.7.4:
-* Fixed: TelegramHandler re-group again an already grouped message
+* Fixed: 
+  * TelegramHandler re-grouped an already grouped message. Now messages are correctly grouped once.
+  * Handlers from all loggers other than the root were mistakenly added to the root's handlers. 
+  This bug prevents the removal of handlers out of the root, 
+  thus the log message was doubled if another different handler is used. 
+  Now root's handlers are correctly added or removed. 
 * Usability:
-  * Pyinstaller: Changed the method of detecting child process, potentially fix all issues related to multiprocessing and pyinstaller
-  * Multiprocessing: logger's server port now automatically picks up a random available port 
-    instead of `DEFAULT_TCP_LOGGING_PORT`. This means in the case of running many multiprocessing 
-    application at the same time, user doesn't need to care about the `port` parameter anymore. 
-    Each application will pick it own port, their child processes will connect to the correct port,
-    and thus log to the correct log file.
+  * Multiprocessing:
+    * Changed the method of detecting child process, potentially fix all issues related to multiprocessing and pyinstaller
+    * logger's server port now automatically picks up a random available port 
+      instead of `DEFAULT_TCP_LOGGING_PORT`. This means in the case of running many multiprocessing 
+      applications at the same time, user doesn't need to care about the `port` parameter anymore. 
+      Each application will pick it own port, their child processes will connect to the correct port,
+      and thus log to the correct destination.
+    * Added `server_timeout` argument to `setup_logging()`: allow user to control how long should the log listener server
+    wait before exiting following the death of the main thread.
+    * Added `client_only` argument to `setup_logging()`: enable different independent applications to log to the same destination.
+ * TelegramHandler: will split the message into parts and send one by one if the message length is bigger than 3072 characters.
+    This is to avoid reaching the limit 4096 chars per message of Telegram API. User should rarely reach this limit.
+ * Format styles: added support for `{` (string.format) and `$` (string.Template) formats. 
+   The same style could be used across `fomatter`'s format and log message's format. 
+    
 
 ## 1.7.3:
 * Usability: 

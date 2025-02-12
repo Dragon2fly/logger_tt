@@ -105,7 +105,7 @@ class DefaultLogRecord(logging.LogRecord):
         """
         msg = str(self.msg)
         if self.kwargs:
-            msg = Template(msg).safe_substitute(self.kwargs)
+            msg = Template(msg).substitute(self.kwargs)
 
         return msg
 

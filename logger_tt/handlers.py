@@ -110,11 +110,13 @@ class TelegramMixing:
         root_logger.error(exception)
         if exception.code == 403:
             # user blocked the bot
-            return True # Stop retrying
+            # drop message
+            return True     # Stop retrying
         if exception.code == 414:
             # Request-URI Too Large
             root_logger.info(url)
-            return False
+            # drop message
+            return True
         if exception.code == 429:
             # too many requests
             time.sleep(1)
@@ -124,7 +126,7 @@ class TelegramMixing:
         return False
 
     def _request(self, _id_, full_url):
-        """Return True if success or 403, otherwise False"""
+        """Return True if success or 403 or 414, otherwise False"""
         try:
             with request.urlopen(full_url) as fi:
                 data = fi.read()
@@ -149,6 +151,8 @@ class TelegramMixing:
 
 
 class TelegramHandler(logging.Handler, TelegramMixing):
+    LIMIT_LENGTH = 3072     # Telegram limits to 4096 chars, we set to around a half number
+
     def __init__(self, token='', unique_ids='', env_token_key='', env_unique_ids_key='',
                  debug=False, check_interval=600, grouping_interval=0, push_interval=0):
         """ Init telegram handler
@@ -228,10 +232,12 @@ class TelegramHandler(logging.Handler, TelegramMixing):
         while msg_queue[_id_]:
             record = msg_queue[_id_].popleft()
             msg_out = self.format(record)
-            full_url = self._build_message_url(_id_, msg_out)
-            if not self._request(_id_, full_url):
-                msg_queue[_id_].appendleft(record)
-                return False
+            for x in range(0, len(msg_out), self.LIMIT_LENGTH):
+                chunk = msg_out[x:x + self.LIMIT_LENGTH]
+                full_url = self._build_message_url(_id_, chunk)
+                if not self._request(_id_, full_url):
+                    msg_queue[_id_].appendleft(record)
+                    return False
         else:
             return True
 

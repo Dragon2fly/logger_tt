@@ -81,7 +81,7 @@ def test_handler_with_buffer_lines(caplog, threshold):
                 assert len(logs) == 2*threshold, "Total log lines should equal threshold * 2"
 
 
-@pytest.mark.skip('Uncomment this line. Add your bot token and chat_id/(group_id, topic) to test. Already tested!')
+@pytest.mark.skip('comment this line. Add your bot token and chat_id/(group_id, topic) to test. Already tested!')
 @pytest.mark.parametrize('unique_id', ['123456789',
                                        '-1234567890123@2',
                                        '-1234567890123@2; -1234567890123@4'
@@ -255,7 +255,7 @@ def test_telegram_handler_grouping_msg_resend(caplog):
 
     # setup
     log_sent = StringIO()
-    mock_urlopen(status_code=414, url_snipping=log_sent)
+    mock_urlopen(status_code=200, url_snipping=log_sent)
 
     # run repeat the same message for a while then different message
     for i in range(100):
@@ -271,3 +271,4 @@ def test_telegram_handler_grouping_msg_resend(caplog):
     data = log_sent.read()
     count = data.count('%0A')
     assert count == 98, 'Grouped message should not be regrouped again'
+    assert data.count('https:') > 1, 'long message should be divided'

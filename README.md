@@ -33,8 +33,10 @@ Even multiprocessing logging becomes a breeze.
 * [Changelog](#changelog)
 
 ## Install
-* From PYPI: `pip install logger_tt`
-* From Github: clone or download this repo then `python setup.py install` 
+* From PYPI: `pip install -U logger_tt`
+* From Github: 
+  1. Download a wheel file from: https://github.com/Dragon2fly/logger_tt/releases
+  2. Open a console and execute: `pip install dowloaded_file_name.whl`
     
 ## Overview:
 

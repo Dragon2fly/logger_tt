@@ -18,11 +18,14 @@ Even multiprocessing logging becomes a breeze.
   * [try-except exception logging](#5-try-except-exception-logging)
   * [Silent unwanted loggers](#6-silent-unwanted-loggers)
   * [Logging in multiprocessing](#7-logging-in-multiprocessing)
+    * [Basic](#71-basic-)
+    * [Central logging server](#72-central-logging-server)
   * [Temporary disable logging](#8-temporary-disable-logging)
   * [Limit traceback line length](#9-limit-traceback-lines-length)
   * [Analyze `raise` exception line](#10-analyze-raise-exception-line)
   * [StreamHandler with buffer](#11-streamhandler-with-buffer)
   * [TelegramHandler](#12-telegram-handler)
+  * [Message format styles](#13-message-format-styles)
     
 * [Sample config](#sample-config)
   * [YAML format](#1-yaml-format)
@@ -116,6 +119,7 @@ This logger is also used to log **uncaught exception** in your project. Example:
 * context logging: When an exception occur, variables used in the line of error are also logged.<br>
 To log full local variables of current function scope, pass `full_context=1` to `setup_logging`.<br>
 If you need the outer scope too, set `full_context` to `2`, `3` and so on...
+<br>
 
 
 ## Usage:
@@ -130,11 +134,13 @@ setup_logging(config_path="", log_path="",
               analyze_raise_statement=False,
               host="",
               port=0,
+              server_timeout: 5,
+              client_only: False,
               )
 ```
 
 This function also return a `LogConfig` object. 
-Except `config_path`, `log_path`, `use_multiprocessing`, `host` and `port`, 
+Except `config_path`, `log_path`, `use_multiprocessing`, `host`, `port`, `server_timeout` and `client_only`, 
 other parameters are attributes of this object and can be changed on the fly.
 
 Except `config_path`, `log_path`, all other parameters can be defined in `logger_tt` section in the config file
@@ -457,13 +463,13 @@ Parameter with the same name passed in `setup_logging` function will override th
    ```
    
 ### 7. Logging in multiprocessing:
-    
-   This is archived by using multiprocessing queues or a socket server.
+#### 7.1 Basic:    
+   This is achieved by using multiprocessing queues or a socket server.
    
    For linux, copy-on-write while forking carries over logger's information. 
    So `multiprocess.Queue` is enough in this case. 
    
-   For Windows, it is important that `setup_logging()` must be call out side of `if __name__ == '__main__':` guard block.
+   For Windows, it is important that `setup_logging()` must be call outside of `if __name__ == '__main__':` guard block.
    Because child processes run from scratch and re-import `__main__`, by re-executing `setup_logging()`, 
    logger `SocketHandler` can be setup automatically. 
    
@@ -526,7 +532,7 @@ The content of `log.txt` should be similar to below:
    * `v1.7.3` and before: `socketHandler` will use tcp `localhost` and port `9020` by default. 
    In the rare cases where you run multiple multiprocessing applications with `logger_tt`, 
    the `Address already in use` error will be raised. In such cases, you have to set the address manually.
-   * `v1.7.4` and after: `socketHandler` will use tcp `localhost` and a random available port by default. 
+   * `v1.7.4` and after: `socketHandler` will use tcp `localhost` and a random available port by default (`port=0`). 
 
 ```python
 setup_logging(host='localhost', port=6789)
@@ -534,7 +540,87 @@ setup_logging(host='localhost', port=6789)
    You can omit the `host` if you use `"localhost"`. 
    You can also set this in the log config file for each application. 
 
-   
+   **Exit timeout**:
+    There is a server_timeout argument to specify how soon 
+   the TCP listener thread should quit after the main thread is dead. It defaults to `5` seconds. 
+   This aims to catch the last log messages from all child processes before terminating. 
+   For some reason, when there is an active socket connection from a child process, 
+   the main app will not exit. If you want your app to exit sooner (return to the console sooner), 
+   set a lower value. Avoid setting it to zero `0` as it will block forever waiting for a TCP packet that may never come.
+
+   **Warning**: If a connection is lost, the TCPHandler will try to connect again. 
+   Because TCPHandler doesn't cache messages,
+   the log messages that was sent during the connection lost or retrying will be dropped.  
+
+
+#### 7.2. Central logging server:
+   When you have multiple somewhat independent applications run at the sametime,
+   and want all of them log into the same destination, do as below:
+
+   * log server: this is a normal application with `use_multiprocessing=True`. 
+You don't actually need to do any multiprocessing operation in this app. 
+One important thing is that `port` should be a defined number other than zero. 
+
+```python
+# log server
+import time
+from logger_tt import setup_logging, logger
+
+config = setup_logging(use_multiprocessing=True, port=7891)
+
+if __name__ == '__main__':
+    server_info = config.tcp_server.socket.getsockname()
+    logger.info("Log server serving at {}:{}".format(*server_info))
+    while True:
+        # Ctrl+C to kill the server
+        time.sleep(1)
+```
+
+   * log clients: for each of your client app, also config the logger with `use_multiprocessing=True`,
+your pre-defined `port`, and `client_only=True`. 
+This tells `logger_tt` to use `socketHandler` with your `port` but not to start a listener sever again.
+
+```python
+# log server
+import time
+from logger_tt import setup_logging, getLogger
+
+config = setup_logging(log_path='logs/log_app1.txt',
+                       use_multiprocessing=True, port=7891, client_only=True)
+logger = getLogger('App1')
+
+
+if __name__ == '__main__':
+    for i in range(10):
+        logger.info(f'Doing task {i}')
+        time.sleep(1)
+
+```
+   You don't actually need to do any multiprocessing operation in the client app also.
+
+   **Warning**: the `log_path` argument in the client app has NO effect. The log destination is defined in the server side.
+
+   **Notice**: the logger name is set to `'App1'` instead of `__name__`. 
+   This is to easily identify which log message came from which app.
+
+```log
+[2025-02-12 12:54:42] [root:235 DEBUG] Log config file: D:\my_project\log_config.json
+[2025-02-12 12:54:42] [root:187 DEBUG] Logging server started!
+[2025-02-12 12:54:42] [root:188 DEBUG] Server port: 7891
+[2025-02-12 12:54:42] [root:241 DEBUG] MP client's log config file: D:\my_project\log_config.json
+[2025-02-12 12:54:42] [__main__:9 INFO] Log server serving at 127.0.0.1:7891
+[2025-02-12 12:54:42] [root:241 DEBUG] MP client's log config file: D:\my_project\log_config.json
+[2025-02-12 12:54:43] [App2:11 INFO] Doing task 0
+[2025-02-12 12:54:43] [App1:11 INFO] Doing task 0
+[2025-02-12 12:54:44] [App2:11 INFO] Doing task 1
+[2025-02-12 12:54:44] [App1:11 INFO] Doing task 1
+[2025-02-12 12:54:45] [App2:11 INFO] Doing task 2
+```
+
+More fine-tuning of message formats and context can be achieved by using `LoggerAdapter` or `Filter` 
+from the standard [logging](https://docs.python.org/3/library/logging.html) lib. 
+Doing that directly within `logger_tt` will be supported in the future.
+
 ### 8. Temporary disable logging:
 
    Some block of code contain critical information, such as password processing, that should not be logged.
@@ -795,6 +881,8 @@ window.close()
    Even though it will resend later, you can avoid the error from the beginning by 
    adding the param `grouping_interval: 1` to the configuration above.
    By doing that, all log messages whose timestamp are in the same second will be sent as one telegram message.
+   When `grouping_interval` is large, causes the grouped message length bigger than 3072 chars, 
+   the message will be split and sent chunk by chunk. 
 
    From here, it should already work. 
    If you need certain messages to go to a certain people/group, besides adding a new handler, 
@@ -824,6 +912,48 @@ logger.notice(f"Alex's files are ready to be collected")
    `dest_name` should be only one name that has been registered in `unique_ids`. 
    If the name is not registered, the log record is simply ignored totally. 
    If you want to send to multiple people, create a telegram group for them and registered the group name.
+
+
+### 13. Message format styles:
+
+`logger-tt` supports 3 format styles for both `format` string and log message: 
+ - `%`: positional classic style (default)
+ - `{`: string format style or brace style. Message is populate by `''.format()`
+ - `$`: template string style. Message is populate by `string.Template().substitute()`
+
+If you are using f-string, none of these above style matter.
+Otherwise, you have to specify the `style` in the formatters.
+
+Note that, the same style should be used for all formatters.
+If two formatters has different style, there may be logging error down the line.
+
+For example, to use the `{` style format, first let's modify the `fomatters` in the log config file:
+```yaml
+formatters:
+  simple:
+    style: "{"
+    format: "[{asctime}] [{name}:{lineno} {levelname}] {message}"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+  brief:
+    style: "{"
+    format: "[{asctime}] {levelname}: {message}"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+```
+
+Then, use the same format style in the logging code:
+
+```python
+    logger.info("This is a {:.2f}th new {obj}", 10, obj='World')
+```
+
+The following kwargs are reserved and should **not** be used in the message:
+- `'exc_info'`
+- `'extra'`
+- `'stack_info'`
+- `'stacklevel'`
+
+Unlike `%` format style, `{` and `$` will not raise error for unused args and kwargs that was passed in.
+Anyhow, all style will raise error if a placeholder in the message missing corresponding argument.  
 
 
 # Sample config:

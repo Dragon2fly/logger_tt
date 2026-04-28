@@ -185,3 +185,27 @@ def test_multiprocessing_issue21_timeout5sec():
 
         # this time there are some more log from the other processes
         assert 'worker complete' in data
+
+
+def test_multiprocessing_issue33_frozen_child_bad_path():
+    """Issue #33: child processes crash when config has a file handler
+    pointing to a non-existent directory without delay=True.
+
+    The main process overrides via log_path, but child processes re-read
+    the config.  Before the fix, dictConfig() in children would try to
+    instantiate the handler at the original bad path and crash.
+    """
+    cmd = [sys.executable, "multiprocessing_issue33.py", "3"]
+    result = run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+    assert result.returncode == 0, f'subprocess crashed with error: {result.stderr}'
+    assert '__finished__' in result.stdout
+
+    data = log.read_text(encoding='utf8')
+    assert 'Issue 33 test: parent ready' in data
+    assert 'child process 0' in data
+    assert 'child process 1' in data
+    assert 'child process 2' in data
+
+    # the bad path directory should never be created
+    bad_dir = Path.cwd() / 'nonexistent_issue33_dir'
+    assert not bad_dir.exists(), f'Child process created the unreferenced handler dir: {bad_dir}'

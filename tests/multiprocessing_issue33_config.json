@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "disable_existing_loggers": false,
+  "formatters": {
+    "simple": {
+      "format": "%(asctime)s %(name)-8s %(levelname)-8s %(processName)-10s %(message)s"
+    },
+    "brief": {
+      "format": "[%(asctime)s] %(levelname)s: %(message)s",
+      "datefmt": "%Y-%m-%d %H:%M:%S"
+    }
+  },
+
+  "handlers": {
+    "console": {
+      "class": "logging.StreamHandler",
+      "level": "INFO",
+      "formatter": "brief",
+      "stream": "ext://sys.stdout"
+    },
+
+    "error_file_handler": {
+      "class": "logging.handlers.TimedRotatingFileHandler",
+      "level": "DEBUG",
+      "formatter": "simple",
+      "filename": "nonexistent_issue33_dir/log.txt",
+      "backupCount": 3,
+      "encoding": "utf8",
+      "when": "midnight"
+    }
+  },
+
+  "loggers": {
+    "urllib3": {
+      "level": "ERROR",
+      "handlers": ["error_file_handler"],
+      "propagate": false
+    }
+  },
+
+  "root": {
+    "level": "DEBUG",
+    "handlers": ["error_file_handler"]
+  },
+
+  "logger_tt": {
+    "suppress": ["exchangelib"],
+    "use_multiprocessing": true,
+    "port": 0
+  }
+}

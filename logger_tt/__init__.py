@@ -211,6 +211,7 @@ def setup_logging(config_path: str = "", log_path: str = "", **logger_tt_config)
         # child process of Spawn-method
         del config['loggers']           # remove all loggers as they will not be used
         del config['root']['handlers']  # remove all handlers of the root logger as a socket handler will be added later
+        config['handlers'] = {}         # remove handler definitions so dictConfig won't instantiate file handlers
 
     try:
         if internal_config.initialized:

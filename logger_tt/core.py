@@ -29,8 +29,15 @@ def in_main_process() -> bool:
     # mimic multiprocessing.spawn.is_forking
     # detect sys.argv[1] as added by multiprocessing.freeze_support()
     condition2 = not (len(sys.argv) >= 2 and sys.argv[1] == '--multiprocessing-fork')
-    # print('is_main_process:', condition1 and condition2, current_process().name, current_process().pid, sys.argv)
-    return condition1 and condition2
+    
+    # check for environment variable set by parent process
+    # this is to support frozen application where sys.argv is not reliable
+    parent_pid = os.getppid()
+    env_var = f'logger_tt_{parent_pid}'
+    condition3 = env_var not in os.environ
+    
+    # print('is_main_process:', condition1 and condition2 and condition3, current_process().name, current_process().pid, sys.argv)
+    return condition1 and condition2 and condition3
 
 
 @contextmanager

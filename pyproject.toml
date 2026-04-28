@@ -1,6 +1,6 @@
 [project]
 name = "logger_tt"
-version = "1.7.4"
+version = "1.7.5"
 description = "Make logging simple, log even exception that you forgot to catch. Make multiprocessing logging becomes a breeze"
 readme = "README.md"
 requires-python = ">=3.6"

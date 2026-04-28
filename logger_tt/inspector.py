@@ -213,7 +213,7 @@ def get_basic_exception_info(summary) -> tuple:
         # indicator
         _locals = summary.locals
         summary.locals = {}
-        data = StackSummary.format_frame_summary(None, summary)
+        data = StackSummary([summary]).format()[0]
         txt = data.splitlines()
         summary.locals = _locals
 

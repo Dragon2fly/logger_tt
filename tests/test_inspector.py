@@ -242,7 +242,28 @@ def test_py_311():
     cmd = [sys.executable, "exception_main_py311.py"]
     run(cmd)
 
-    expected_traceback = r"""Traceback (most recent call last):
+    if sys.version_info >= (3, 13):
+        # Python 3.13+ uses ~ for context and ^ for error, and adds
+        # indicators to more frames than 3.11-3.12
+        expected_traceback = r"""Traceback (most recent call last):
+  File "PATH", line 30, in <module>
+    lel3(xx)
+    ~~~~^^^^
+
+  File "PATH", line 25, in lel3
+    return lel2(x) / 23
+           ~~~~^^^
+
+  File "PATH", line 21, in lel2
+    return 25 + lel(x) + lel(x)
+                ~~~^^^
+
+  File "PATH", line 17, in lel
+    return 1 + foo(a, b, c=x['z']['x']['y']['z']['y'], d=e)
+                           ~~~~~~~~~~~~~~~~^^^^^"""
+
+    else:
+        expected_traceback = r"""Traceback (most recent call last):
   File "PATH", line 30, in <module>
     lel3(xx)
 
@@ -257,6 +278,7 @@ def test_py_311():
   File "PATH", line 17, in lel
     return 1 + foo(a, b, c=x['z']['x']['y']['z']['y'], d=e)
                            ~~~~~~~~~~~~~~~~^^^^^"""
+
     expected_traceback = re.escape(expected_traceback).replace("PATH", '[^"]*exception_main_py311[.]py')
 
     data = log.read_text()
